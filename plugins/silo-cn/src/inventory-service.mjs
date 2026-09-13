@@ -1,8 +1,53 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  fstatSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  readSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { homedir } from "node:os";
 
 const SCOPES = new Set(["active", "archived", "all"]);
+const DESKTOP_ACTIVITY_WINDOW_MS = 10 * 60 * 1000;
+
+function rolloutHasRecentOpenTurn(path) {
+  if (!path || !existsSync(path)) return false;
+  let fd;
+  try {
+    fd = openSync(path, "r");
+    const stat = fstatSync(fd);
+    if (Date.now() - stat.mtimeMs > DESKTOP_ACTIVITY_WINDOW_MS) return false;
+    const length = Math.min(stat.size, 256 * 1024);
+    if (!length) return false;
+    const buffer = Buffer.allocUnsafe(length);
+    readSync(fd, buffer, 0, length, stat.size - length);
+    const lines = buffer.toString("utf8").trim().split(/\r?\n/);
+    for (let index = lines.length - 1; index >= 0; index -= 1) {
+      try {
+        const record = JSON.parse(lines[index]);
+        if (record?.type === "event_msg" && record?.payload?.type === "task_complete") return false;
+        // Any durable item written after the previous task_complete means the
+        // desktop writer still has an open turn. The recency bound prevents an
+        // abandoned rollout from being reported forever.
+        if (["event_msg", "response_item", "token_usage_record", "turn_context"].includes(record?.type)) {
+          return true;
+        }
+      } catch {
+        // The first line can be a partial record because this is a tail read.
+      }
+    }
+  } catch {
+    return false;
+  } finally {
+    if (fd !== undefined) closeSync(fd);
+  }
+  return false;
+}
 
 async function mapConcurrent(items, limit, mapper) {
   const results = new Array(items.length);
@@ -255,8 +300,14 @@ export class InventoryService {
           return null;
         }
       });
+      const desktopActivity = await this.#readDesktopActivity(roots.slice(0, 200).map((thread) => thread.id));
       tasks = roots.map((thread, index) =>
-        this.#normalizeAppThread(thread, projectMap, latestTurns[index], liveMap.get(thread.id)),
+        this.#normalizeAppThread(
+          thread,
+          projectMap,
+          latestTurns[index],
+          liveMap.get(thread.id) || desktopActivity.get(thread.id),
+        ),
       );
       rateLimits = usage;
       this.source = "app-server";
@@ -317,17 +368,32 @@ export class InventoryService {
   async scanRunning() {
     const startedAt = Date.now();
     const listed = await this.appServer.listThreads({ archived: false });
-    const appTasks = listed.items
-      .filter(
-        (thread) =>
-          !thread.parentThreadId &&
-          !thread.agentRole &&
-          !thread.agentNickname &&
-          ["active", "waiting_approval", "waiting_input"].includes(
-            normalizeProcessStatus(thread.status),
-          ),
+    const roots = listed.items.filter(
+      (thread) => !thread.parentThreadId && !thread.agentRole && !thread.agentNickname,
+    );
+    // A plugin-owned app-server process cannot see the process registry of every
+    // Codex window. The newest persisted turn is shared, however. Enrich the
+    // lightweight scan so a task running in the desktop process is not dropped
+    // merely because this app-server reports it as not loaded.
+    const latestTurns = await mapConcurrent(roots.slice(0, 200), 12, async (thread) => {
+      try {
+        return await this.appServer.readLatestTurn(thread.id);
+      } catch {
+        return null;
+      }
+    });
+    const desktopActivity = await this.#readDesktopActivity(roots.slice(0, 200).map((thread) => thread.id));
+    const appTasks = roots
+      .slice(0, 200)
+      .map((thread, index) =>
+        this.#normalizeAppThread(
+          thread,
+          new Map(),
+          latestTurns[index],
+          desktopActivity.get(thread.id) || null,
+        ),
       )
-      .map((thread) => this.#normalizeAppThread(thread, new Map(), null, null))
+      .filter((task) => ["active", "waiting_approval", "waiting_input"].includes(task.status))
       .sort((a, b) => b.updatedAt - a.updatedAt);
     const byId = new Map(appTasks.map((task) => [task.id, task]));
     if (Date.now() - this.nativeSnapshotAt < 10 * 60 * 1000) {
@@ -353,7 +419,9 @@ export class InventoryService {
       count: tasks.length,
       tasks,
       inventoryTruncated: listed.truncated,
-      source: this.nativeSnapshotAt ? "native-snapshot+app-server" : "app-server-live",
+      source: this.nativeSnapshotAt
+        ? "native-snapshot+app-server"
+        : "app-server+latest-turn-observation",
       nativeStatusAt: this.nativeSnapshotAt || null,
     };
   }
@@ -365,12 +433,12 @@ export class InventoryService {
     let status = processStatus;
     let statusEvidence = "inventory_process";
     if (processStatus === "not_loaded" && latestTurn?.status === "inProgress") {
-      status = "possibly_external";
-      statusEvidence = "history_inference";
+      status = "active";
+      statusEvidence = "latest_turn_in_progress";
     }
     if (live?.status === "active") {
       status = "active";
-      statusEvidence = "codex_app_live";
+      statusEvidence = live.statusEvidence || "codex_app_live";
     } else if (
       live?.status === "idle" &&
       ["idle", "not_loaded"].includes(status) &&
@@ -410,6 +478,35 @@ export class InventoryService {
       branch: thread.gitInfo?.branch || null,
       lastTurnStatus,
     };
+  }
+
+  async #readDesktopActivity(threadIds) {
+    if (!threadIds.length) return new Map();
+    const dbPath = join(this.codexHome, "state_5.sqlite");
+    if (!existsSync(dbPath)) return new Map();
+    let DatabaseSync;
+    try {
+      ({ DatabaseSync } = await import("node:sqlite"));
+    } catch {
+      return new Map();
+    }
+    const db = new DatabaseSync(dbPath, { readOnly: true });
+    try {
+      const placeholders = threadIds.map(() => "?").join(",");
+      const rows = db
+        .prepare(`SELECT id, rollout_path FROM threads WHERE id IN (${placeholders})`)
+        .all(...threadIds);
+      return new Map(
+        rows
+          .filter((row) => rolloutHasRecentOpenTurn(row.rollout_path))
+          .map((row) => [
+            row.id,
+            { status: "active", hostId: "local", statusEvidence: "desktop_rollout_active" },
+          ]),
+      );
+    } finally {
+      db.close();
+    }
   }
 
   async #scanSqlite(scope, liveMap) {

@@ -1,6 +1,6 @@
 {
   "name": "silo-cn",
-  "version": "0.4.0+codex.20260913",
+  "version": "0.4.1+codex.20260913",
   "description": "SILO 中文版用于扫描、筛选、批量继续或优化 Codex 任务，并查看当前运行任务与历史批次。",
   "author": {
     "name": "LIMITEDRUSH"

@@ -1,6 +1,6 @@
 {
   "name": "silo-en",
-  "version": "0.4.0+codex.20260913",
+  "version": "0.4.1+codex.20260913",
   "description": "SILO English scans, filters, batch-continues or optimizes Codex tasks, and keeps current activity and batch history visible.",
   "author": {
     "name": "LIMITEDRUSH"

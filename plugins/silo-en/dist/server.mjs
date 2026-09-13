@@ -36880,10 +36880,50 @@ var CodexAppServer = class extends EventEmitter {
 };
 
 // src/inventory-service.mjs
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  fstatSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  readSync,
+  readdirSync,
+  writeFileSync
+} from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { homedir } from "node:os";
 var SCOPES = /* @__PURE__ */ new Set(["active", "archived", "all"]);
+var DESKTOP_ACTIVITY_WINDOW_MS = 10 * 60 * 1e3;
+function rolloutHasRecentOpenTurn(path) {
+  if (!path || !existsSync(path)) return false;
+  let fd;
+  try {
+    fd = openSync(path, "r");
+    const stat = fstatSync(fd);
+    if (Date.now() - stat.mtimeMs > DESKTOP_ACTIVITY_WINDOW_MS) return false;
+    const length = Math.min(stat.size, 256 * 1024);
+    if (!length) return false;
+    const buffer = Buffer.allocUnsafe(length);
+    readSync(fd, buffer, 0, length, stat.size - length);
+    const lines = buffer.toString("utf8").trim().split(/\r?\n/);
+    for (let index = lines.length - 1; index >= 0; index -= 1) {
+      try {
+        const record2 = JSON.parse(lines[index]);
+        if (record2?.type === "event_msg" && record2?.payload?.type === "task_complete") return false;
+        if (["event_msg", "response_item", "token_usage_record", "turn_context"].includes(record2?.type)) {
+          return true;
+        }
+      } catch {
+      }
+    }
+  } catch {
+    return false;
+  } finally {
+    if (fd !== void 0) closeSync(fd);
+  }
+  return false;
+}
 async function mapConcurrent(items, limit, mapper) {
   const results = new Array(items.length);
   let cursor = 0;
@@ -37090,8 +37130,14 @@ var InventoryService = class {
           return null;
         }
       });
+      const desktopActivity = await this.#readDesktopActivity(roots.slice(0, 200).map((thread) => thread.id));
       tasks = roots.map(
-        (thread, index) => this.#normalizeAppThread(thread, projectMap, latestTurns[index], liveMap.get(thread.id))
+        (thread, index) => this.#normalizeAppThread(
+          thread,
+          projectMap,
+          latestTurns[index],
+          liveMap.get(thread.id) || desktopActivity.get(thread.id)
+        )
       );
       rateLimits = usage;
       this.source = "app-server";
@@ -37148,11 +37194,25 @@ var InventoryService = class {
   async scanRunning() {
     const startedAt = Date.now();
     const listed = await this.appServer.listThreads({ archived: false });
-    const appTasks = listed.items.filter(
-      (thread) => !thread.parentThreadId && !thread.agentRole && !thread.agentNickname && ["active", "waiting_approval", "waiting_input"].includes(
-        normalizeProcessStatus(thread.status)
+    const roots = listed.items.filter(
+      (thread) => !thread.parentThreadId && !thread.agentRole && !thread.agentNickname
+    );
+    const latestTurns = await mapConcurrent(roots.slice(0, 200), 12, async (thread) => {
+      try {
+        return await this.appServer.readLatestTurn(thread.id);
+      } catch {
+        return null;
+      }
+    });
+    const desktopActivity = await this.#readDesktopActivity(roots.slice(0, 200).map((thread) => thread.id));
+    const appTasks = roots.slice(0, 200).map(
+      (thread, index) => this.#normalizeAppThread(
+        thread,
+        /* @__PURE__ */ new Map(),
+        latestTurns[index],
+        desktopActivity.get(thread.id) || null
       )
-    ).map((thread) => this.#normalizeAppThread(thread, /* @__PURE__ */ new Map(), null, null)).sort((a, b) => b.updatedAt - a.updatedAt);
+    ).filter((task) => ["active", "waiting_approval", "waiting_input"].includes(task.status)).sort((a, b) => b.updatedAt - a.updatedAt);
     const byId = new Map(appTasks.map((task) => [task.id, task]));
     if (Date.now() - this.nativeSnapshotAt < 10 * 60 * 1e3) {
       for (const [id, live] of this.nativeSnapshot) {
@@ -37177,7 +37237,7 @@ var InventoryService = class {
       count: tasks.length,
       tasks,
       inventoryTruncated: listed.truncated,
-      source: this.nativeSnapshotAt ? "native-snapshot+app-server" : "app-server-live",
+      source: this.nativeSnapshotAt ? "native-snapshot+app-server" : "app-server+latest-turn-observation",
       nativeStatusAt: this.nativeSnapshotAt || null
     };
   }
@@ -37188,12 +37248,12 @@ var InventoryService = class {
     let status = processStatus;
     let statusEvidence = "inventory_process";
     if (processStatus === "not_loaded" && latestTurn?.status === "inProgress") {
-      status = "possibly_external";
-      statusEvidence = "history_inference";
+      status = "active";
+      statusEvidence = "latest_turn_in_progress";
     }
     if (live?.status === "active") {
       status = "active";
-      statusEvidence = "codex_app_live";
+      statusEvidence = live.statusEvidence || "codex_app_live";
     } else if (live?.status === "idle" && ["idle", "not_loaded"].includes(status) && !["active", "waiting_approval", "waiting_input"].includes(processStatus)) {
       status = "idle";
       statusEvidence = "codex_app_live";
@@ -37227,6 +37287,30 @@ var InventoryService = class {
       branch: thread.gitInfo?.branch || null,
       lastTurnStatus
     };
+  }
+  async #readDesktopActivity(threadIds) {
+    if (!threadIds.length) return /* @__PURE__ */ new Map();
+    const dbPath = join(this.codexHome, "state_5.sqlite");
+    if (!existsSync(dbPath)) return /* @__PURE__ */ new Map();
+    let DatabaseSync;
+    try {
+      ({ DatabaseSync } = await import("node:sqlite"));
+    } catch {
+      return /* @__PURE__ */ new Map();
+    }
+    const db = new DatabaseSync(dbPath, { readOnly: true });
+    try {
+      const placeholders = threadIds.map(() => "?").join(",");
+      const rows = db.prepare(`SELECT id, rollout_path FROM threads WHERE id IN (${placeholders})`).all(...threadIds);
+      return new Map(
+        rows.filter((row) => rolloutHasRecentOpenTurn(row.rollout_path)).map((row) => [
+          row.id,
+          { status: "active", hostId: "local", statusEvidence: "desktop_rollout_active" }
+        ])
+      );
+    } finally {
+      db.close();
+    }
   }
   async #scanSqlite(scope, liveMap) {
     const dbPath = join(this.codexHome, "state_5.sqlite");
@@ -37399,11 +37483,11 @@ var InventoryService = class {
 // src/native-job-store.mjs
 import { randomUUID } from "node:crypto";
 import {
-  closeSync,
+  closeSync as closeSync2,
   existsSync as existsSync2,
   fsyncSync,
   mkdirSync as mkdirSync2,
-  openSync,
+  openSync as openSync2,
   readFileSync as readFileSync2,
   renameSync,
   statSync,
@@ -37860,16 +37944,16 @@ var NativeJobStore = class {
     const temporary = `${this.filePath}.${process.pid}.${randomUUID()}.tmp`;
     let descriptor;
     try {
-      descriptor = openSync(temporary, "wx", 384);
+      descriptor = openSync2(temporary, "wx", 384);
       writeFileSync2(descriptor, payload, "utf8");
       fsyncSync(descriptor);
-      closeSync(descriptor);
+      closeSync2(descriptor);
       descriptor = void 0;
       renameSync(temporary, this.filePath);
     } catch (error61) {
       if (descriptor !== void 0) {
         try {
-          closeSync(descriptor);
+          closeSync2(descriptor);
         } catch {
         }
       }
@@ -37889,7 +37973,7 @@ var NativeJobStore = class {
     let descriptor;
     while (descriptor === void 0) {
       try {
-        descriptor = openSync(lockPath, "wx", 384);
+        descriptor = openSync2(lockPath, "wx", 384);
         writeFileSync2(descriptor, `${process.pid}
 `, "utf8");
         fsyncSync(descriptor);
@@ -37908,7 +37992,7 @@ var NativeJobStore = class {
     }
     return () => {
       try {
-        closeSync(descriptor);
+        closeSync2(descriptor);
       } catch {
       }
       try {

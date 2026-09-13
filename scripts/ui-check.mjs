@@ -97,8 +97,9 @@ assert.match(html, /row\.addEventListener\(["']click["'].*manageActivityTarget\(
 assert.match(html, /els\.activityLiveDot\.hidden=!runningIds\.size/);
 assert.match(html, /function renderHistory\(\)/);
 assert.match(html, /state\.inspectedJobId=job\.id/);
-assert.match(html, /requestNativeStatusSync\(false\)/);
-assert.match(html, /limit 200/);
+assert.doesNotMatch(html, /function requestNativeStatusSync/);
+assert.match(html, /async function refreshFromUser\(\)\{await refresh\(\)\}/);
+assert.match(html, /正在当前面板内刷新任务与运行状态/);
 assert.match(html, /p\.liveThreads\|\|\[\][\s\S]*state\.runningTasks=new Map/);
 assert.match(html, /Codex 当前正在进行/);
 assert.match(html, /setInterval\(function\(\)\{void pollRunningTasks\(\)\},10000\)/);

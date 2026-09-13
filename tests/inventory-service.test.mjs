@@ -43,7 +43,7 @@ test("reports inventory truncation without hiding scanned tasks", async () => {
   assert.match(result.warning, /2000/);
 });
 
-test("blocks a not-loaded thread whose latest turn is still in progress", async () => {
+test("recognizes a not-loaded thread whose latest turn is still in progress", async () => {
   class ExternalTurnAppServer extends MockAppServer {
     async listThreads() {
       return {
@@ -69,10 +69,14 @@ test("blocks a not-loaded thread whose latest turn is still in progress", async 
 
   const inventory = new InventoryService(new ExternalTurnAppServer(), { snapshotPath: false });
   const result = await inventory.scan({ scope: "active", liveThreads: [] });
-  assert.equal(result.tasks[0].status, "possibly_external");
-  assert.equal(result.tasks[0].statusEvidence, "history_inference");
+  assert.equal(result.tasks[0].status, "active");
+  assert.equal(result.tasks[0].statusEvidence, "latest_turn_in_progress");
+  assert.equal(result.tasks[0].workflowState, "running");
   assert.equal(result.tasks[0].runnable, false);
-  assert.match(result.tasks[0].blockedReason, /其他 Codex 窗口/);
+  assert.match(result.tasks[0].blockedReason, /正在工作/);
+
+  const running = await inventory.scanRunning();
+  assert.equal(running.tasks.some((task) => task.id === "thread-running-elsewhere"), true);
 });
 
 test("does not treat a normalized interrupted history turn as authoritative live state", async () => {
@@ -141,7 +145,7 @@ test("lightweight running scan returns only active and attention-waiting root ta
 
   const inventory = new InventoryService(new RunningAppServer(), { snapshotPath: false });
   const result = await inventory.scanRunning();
-  assert.equal(result.source, "app-server-live");
+  assert.equal(result.source, "app-server+latest-turn-observation");
   assert.deepEqual(
     result.tasks.map((task) => task.status).sort(),
     ["active", "waiting_approval", "waiting_input"],
