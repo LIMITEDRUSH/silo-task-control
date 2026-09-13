@@ -37434,8 +37434,12 @@ var InventoryService = class {
       updatedAt: Number(thread.recencyAt || thread.updatedAt || 0) * 1e3,
       createdAt: Number(thread.createdAt || 0) * 1e3,
       branch: thread.gitInfo?.branch || null,
-      model: safeText(thread.model, "", 64) || null,
-      effort: safeText(thread.reasoningEffort || thread.reasoning_effort, "", 32) || null,
+      model: safeText(thread.model || live?.model, "", 64) || null,
+      effort: safeText(
+        thread.reasoningEffort || thread.reasoning_effort || live?.effort,
+        "",
+        32
+      ) || null,
       lastTurnStatus
     };
   }
@@ -37452,12 +37456,24 @@ var InventoryService = class {
     const db = new DatabaseSync(dbPath, { readOnly: true });
     try {
       const placeholders = threadIds.map(() => "?").join(",");
-      const rows = db.prepare(`SELECT id, rollout_path FROM threads WHERE id IN (${placeholders})`).all(...threadIds);
+      const rows = db.prepare(
+        `SELECT id, rollout_path, model, reasoning_effort
+           FROM threads
+           WHERE id IN (${placeholders})`
+      ).all(...threadIds);
       return new Map(
-        rows.filter((row) => rolloutHasRecentOpenTurn(row.rollout_path)).map((row) => [
-          row.id,
-          { status: "active", hostId: "local", statusEvidence: "desktop_rollout_active" }
-        ])
+        rows.map((row) => {
+          const active = rolloutHasRecentOpenTurn(row.rollout_path);
+          return [
+            row.id,
+            {
+              ...active ? { status: "active", statusEvidence: "desktop_rollout_active" } : {},
+              hostId: "local",
+              model: safeText(row.model, "", 64) || null,
+              effort: safeText(row.reasoning_effort, "", 32) || null
+            }
+          ];
+        })
       );
     } finally {
       db.close();

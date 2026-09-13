@@ -151,6 +151,10 @@ assert.match(html, /function createComposerChoice\(kind,value,choices,onChoose,d
 assert.match(html, /className="composer-choice "\+kind/);
 assert.match(html, /modelName\.textContent=shownModel/);
 assert.match(html, /modelEffort\.textContent=effortChoiceLabel\(shownEffort\)\+" effort"/);
+assert.match(html, /selectable&&!mode\?" default":""/);
+assert.match(html, /"默认\\n优化":"默认\\n继续"/);
+assert.match(html, /#filesPane\{display:block;width:100%;max-width:100%;min-width:0;min-height:0;overflow:hidden\}/);
+assert.match(html, /\.code-reader\{width:100%;max-width:100%;min-width:0;min-height:0;overflow:auto/);
 assert.match(html, /views\.appendChild\(els\.smartSelect\)/);
 assert.match(html, /\.view-switch>button\{flex:0 0 auto;height:58px!important;min-height:58px!important/);
 assert.match(html, /\.message\.assistant \.message-copy\{max-width:94%;border-color:/);

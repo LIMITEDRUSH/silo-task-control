@@ -556,8 +556,12 @@ export class InventoryService {
       updatedAt: Number(thread.recencyAt || thread.updatedAt || 0) * 1000,
       createdAt: Number(thread.createdAt || 0) * 1000,
       branch: thread.gitInfo?.branch || null,
-      model: safeText(thread.model, "", 64) || null,
-      effort: safeText(thread.reasoningEffort || thread.reasoning_effort, "", 32) || null,
+      model: safeText(thread.model || live?.model, "", 64) || null,
+      effort: safeText(
+        thread.reasoningEffort || thread.reasoning_effort || live?.effort,
+        "",
+        32,
+      ) || null,
       lastTurnStatus,
     };
   }
@@ -576,15 +580,27 @@ export class InventoryService {
     try {
       const placeholders = threadIds.map(() => "?").join(",");
       const rows = db
-        .prepare(`SELECT id, rollout_path FROM threads WHERE id IN (${placeholders})`)
+        .prepare(
+          `SELECT id, rollout_path, model, reasoning_effort
+           FROM threads
+           WHERE id IN (${placeholders})`,
+        )
         .all(...threadIds);
       return new Map(
-        rows
-          .filter((row) => rolloutHasRecentOpenTurn(row.rollout_path))
-          .map((row) => [
+        rows.map((row) => {
+          const active = rolloutHasRecentOpenTurn(row.rollout_path);
+          return [
             row.id,
-            { status: "active", hostId: "local", statusEvidence: "desktop_rollout_active" },
-          ]),
+            {
+              ...(active
+                ? { status: "active", statusEvidence: "desktop_rollout_active" }
+                : {}),
+              hostId: "local",
+              model: safeText(row.model, "", 64) || null,
+              effort: safeText(row.reasoning_effort, "", 32) || null,
+            },
+          ];
+        }),
       );
     } finally {
       db.close();

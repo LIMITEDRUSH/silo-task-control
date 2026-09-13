@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { InventoryService } from "../src/inventory-service.mjs";
 
 class MockAppServer extends EventEmitter {
@@ -45,6 +49,36 @@ test("reports inventory truncation without hiding scanned tasks", async () => {
   assert.equal(result.tasks[0].effort, "high");
   assert.equal(result.inventoryTruncated, true);
   assert.match(result.warning, /2000/);
+});
+
+test("enriches app-server tasks with the persisted Codex model and effort", async (t) => {
+  const codexHome = mkdtempSync(join(tmpdir(), "silo-model-index-"));
+  t.after(() => rmSync(codexHome, { recursive: true, force: true }));
+  const db = new DatabaseSync(join(codexHome, "state_5.sqlite"));
+  db.exec(
+    "CREATE TABLE threads (id TEXT PRIMARY KEY, rollout_path TEXT, model TEXT, reasoning_effort TEXT)",
+  );
+  db.prepare(
+    "INSERT INTO threads (id, rollout_path, model, reasoning_effort) VALUES (?, ?, ?, ?)",
+  ).run("thread-inventory-test", "", "gpt-6-astra", "ultra");
+  db.close();
+
+  class ModelOmittingAppServer extends MockAppServer {
+    async listThreads() {
+      const listed = await super.listThreads();
+      delete listed.items[0].model;
+      delete listed.items[0].reasoningEffort;
+      return listed;
+    }
+  }
+
+  const inventory = new InventoryService(new ModelOmittingAppServer(), {
+    codexHome,
+    snapshotPath: false,
+  });
+  const result = await inventory.scan({ scope: "active", liveThreads: [] });
+  assert.equal(result.tasks[0].model, "gpt-6-astra");
+  assert.equal(result.tasks[0].effort, "ultra");
 });
 
 test("reads a task conversation and sends Burn with fast mode", async () => {
