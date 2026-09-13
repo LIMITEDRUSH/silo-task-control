@@ -1,0 +1,7 @@
+node_modules/
+.playwright-cli/
+*.log
+.env
+.env.*
+*.local
+design-qa.md

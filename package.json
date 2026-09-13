@@ -1,0 +1,28 @@
+{
+  "name": "silo-task-control",
+  "version": "0.2.1",
+  "private": true,
+  "type": "module",
+  "description": "Native Codex task inventory and batch-dispatch control panel.",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "build": "esbuild src/server.mjs --bundle --platform=node --format=esm --outfile=dist/server.mjs",
+    "test": "node --test",
+    "ui-check": "node scripts/ui-check.mjs",
+    "desktop": "node desktop/server.mjs",
+    "desktop-smoke": "node scripts/desktop-smoke.mjs",
+    "smoke": "node scripts/mcp-smoke.mjs",
+    "sidebar-doctor": "node scripts/sidebar-doctor.mjs",
+    "check": "npm run test && npm run ui-check && npm run build && npm run desktop-smoke"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "1.7.5",
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

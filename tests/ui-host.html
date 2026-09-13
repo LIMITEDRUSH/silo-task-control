@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>SILO UI host</title>
+  <style>
+    html, body { margin: 0; min-height: 100%; background: #f3f3f3; font-family: sans-serif; }
+    .host { max-width: 1280px; margin: 18px auto; padding: 0 14px; }
+    .label { margin-bottom: 8px; color: #676b72; font: 11px Consolas, monospace; }
+    iframe { display: block; width: 100%; height: calc(100vh - 72px); min-height: 320px; border: 0; background: transparent; }
+    #dispatch { margin-top: 8px; color: #126443; font: 11px Consolas, monospace; }
+    body.clean { overflow: hidden; background: #fff; }
+    body.clean .host { width: max-content; max-width: none; margin: 0; padding: 0; }
+    body.clean .label, body.clean #dispatch { display: none; }
+    body.clean iframe { width: 1488px; min-height: 0; }
+  </style>
+</head>
+<body>
+  <main class="host">
+    <div class="label">LOCAL MCP APPS MOCK HOST // NO REAL TASK MUTATIONS</div>
+    <iframe id="app" src="../ui/control.html?v=20260912" title="SILO control"></iframe>
+    <div id="dispatch"></div>
+  </main>
+  <script>
+    var hostParams = new URLSearchParams(location.search);
+    var requestedWidth = Number(hostParams.get("width"));
+    var requestedHeight = Number(hostParams.get("height"));
+    if (hostParams.get("clean") === "1") {
+      document.body.classList.add("clean");
+    }
+    if (Number.isFinite(requestedWidth) && requestedWidth >= 280) {
+      document.querySelector(".host").style.maxWidth = requestedWidth + "px";
+      if (hostParams.get("clean") === "1") document.querySelector("iframe").style.width = requestedWidth + "px";
+    }
+    if (Number.isFinite(requestedHeight) && requestedHeight >= 320) {
+      document.querySelector("iframe").style.height = requestedHeight + "px";
+    }
+    if (hostParams.get("viewport") === "mobile") {
+      document.querySelector(".host").style.maxWidth = "420px";
+      document.querySelector("iframe").style.height = "760px";
+    }
+    var now = Date.now(), nativeReads = 0;
+    var legacyInit = new URLSearchParams(location.search).get("legacyInit");
+    var tasks = [
+      ["thread-a","完善 MemoryRush 实验控制器","MemoryRush","C:\\Users\\Lenovo\\Documents\\ChatGPT\\MemoryRush","idle",true,false,"unfinished"],
+      ["thread-b","重新审计 R14-C14 实验","MemoryRush","C:\\Users\\Lenovo\\Documents\\ChatGPT\\MemoryRush","failed",true,false,"unfinished"],
+      ["thread-c","（未命名任务）","Master","C:\\Users\\Lenovo\\Documents\\Master","interrupted",true,false,"unfinished"],
+      ["thread-d","数据清洗与分析脚本","lab","C:\\Users\\Lenovo\\Documents\\Codex\\lab","active",false,false,"running"],
+      ["thread-e","整理实验归档","Archive","C:\\Users\\Lenovo\\Documents\\Archive","idle",true,false,"completed"],
+      ["thread-f","构建直播掉宝监控","Archive","C:\\Users\\Lenovo\\Documents\\Archive","not_loaded",true,true,"unfinished"],
+      ["thread-g","更新个人主页研究页面","Archive","C:\\Users\\Lenovo\\Documents\\Archive","not_loaded",true,true,"completed"],
+      ["thread-h","课程选择与毕业要求核对","Archive","C:\\Users\\Lenovo\\Documents\\Archive","waiting_input",false,false,"completed"],
+      ["thread-i","已交付的个人主页","Archive","C:\\Users\\Lenovo\\Documents\\Archive","idle",false,false,"completed"]
+    ].map(function (row, index) {
+      return {
+        id: row[0], hostId: "local", title: row[1], projectName: row[2],
+        projectKey: row[2], cwd: row[3], folderPath: row[3],
+        folderName: row[3].split("\\").filter(Boolean).at(-1), folderKey: row[3].toLowerCase(),
+        status: row[4], runnable: row[5],
+        collisionRisk: row[6], blockedReason: row[5] ? null : "当前任务不可调度",
+        statusEvidence: ["active", "idle", "waiting_input"].includes(row[4]) ? "codex_app_live" : "inventory_process",
+        archived: row[2] === "Archive", workflowState: row[7], updatedAt: now - index * 240000, createdAt: now - (index + 4) * 86400000, preview: ""
+      };
+    });
+    var inventory = {
+      scanId: "scan-mock", scannedAt: now, durationMs: 4388, source: "app-server",
+      scope: "all", count: tasks.length, projectCount: 4, nativeStatusAt: now, nativeStatusCount: 8,
+      runnableCount: tasks.filter(function (t) { return t.runnable; }).length,
+      collisionRiskCount: tasks.filter(function (t) { return t.runnable && t.collisionRisk; }).length,
+      warning: null, inventoryTruncated: false, tasks: tasks,
+      rateLimits: {
+        primary: { remainingPercent: 84 },
+        secondary: { remainingPercent: 61 },
+        planType: "pro", limitName: "Codex", resetCredits: 1
+      },
+      capabilities: { maxSelection: 50, maxConcurrency: 8 }
+    };
+    var frame = document.getElementById("app");
+    frame.addEventListener("load", function () {
+      if (legacyInit === "timeout") {
+        frame.contentWindow.openai = {
+          theme: "light",
+          callTool: function (name) {
+            if (name === "scan_tasks") return Promise.resolve({ structuredContent: inventory });
+            if (name === "scan_running_tasks") return Promise.resolve({ structuredContent: { source: "app-server-live", tasks: inventory.tasks.filter(function (task) { return ["active", "waiting_approval", "waiting_input"].includes(task.status); }) } });
+            return Promise.resolve({ structuredContent: {} });
+          },
+          sendFollowUpMessage: function () { return Promise.resolve({ accepted: true }); }
+        };
+      }
+      frame.contentWindow.postMessage({
+        jsonrpc: "2.0",
+        method: "ui/notifications/tool-result",
+        params: { _meta: { silo: inventory }, structuredContent: { count: inventory.count } }
+      }, "*");
+    });
+    window.addEventListener("message", function (event) {
+      if (event.source !== frame.contentWindow) return;
+      var message = event.data;
+      if (!message || message.jsonrpc !== "2.0" || message.id === undefined) return;
+      var result = {};
+      if (message.method === "ui/initialize") {
+        if (legacyInit === "timeout") return;
+        document.getElementById("dispatch").textContent = "MOCK MCP APPS HANDSHAKE RECEIVED";
+        result = {
+          protocolVersion: "2026-01-26",
+          hostInfo: { name: "silo-ui-mock-host", version: "0.1.0" },
+          hostCapabilities: { serverTools: {}, message: { text: {} } },
+          hostContext: { theme: "light", displayMode: "inline" }
+        };
+      } else if (message.method === "tools/call" && message.params.name === "scan_tasks") {
+        document.getElementById("dispatch").textContent =
+          "MOCK SCAN RECEIVED // live=" + message.params.arguments.liveThreads.length;
+        result = { structuredContent: inventory };
+      } else if (message.method === "tools/call" && message.params.name === "scan_running_tasks") {
+        result = {
+          structuredContent: {
+            source: "app-server-live",
+            scannedAt: Date.now(),
+            count: 1,
+            tasks: inventory.tasks.filter(function (task) { return task.status === "active"; })
+          }
+        };
+      } else if (message.method === "tools/call" && message.params.name === "recommend_tasks") {
+        result = {
+          structuredContent: {
+            analyzedAt: Date.now(), reviewedCount: 6, selectedCount: 2,
+            basis: "最近两轮对话与任务状态",
+            recommendations: [
+              { id: "thread-a", mode: "continue", reason: "最近一轮尚未完成或被中断", confidence: "high" },
+              { id: "thread-g", mode: "optimize", reason: "主体工作已结束，适合做一次质量复核", confidence: "medium" }
+            ]
+          }
+        };
+      } else if (message.method === "tools/call" && message.params.name === "preview_task_prompt") {
+        var mode = message.params.arguments.mode;
+        result = {
+          structuredContent: {
+            id: message.params.arguments.id,
+            mode: mode,
+            modeLabel: mode === "continue" ? "继续工作" : "优化工作",
+            prompt: (mode === "continue"
+              ? "【执行目标】\n请完善 MemoryRush 实验控制器。\n\n【执行要求】\n1. 完成生命周期管理\n2. 完成状态持久化\n3. 验证关键流程"
+              : "【执行目标】\n在现有成果上进行一次有证据的优化冲刺。") +
+              (message.params.arguments.burn ? "\n\n【Burn 执行策略｜已开启】\n- 并行推进可独立验证的工作。" : ""),
+            maxLength: 6000
+          }
+        };
+      } else if (message.method === "tools/call" && message.params.name === "read_quota") {
+        result = { structuredContent: { checkedAt: Date.now(), rateLimits: inventory.rateLimits } };
+      } else if (message.method === "tools/call" && message.params.name === "read_reset_prediction") {
+        result = { structuredContent: { status: "none", lastReset: "9月12日 UTC 08:09", nextReset: "暂无计划", label: "暂无计划", detail: "网站当前没有公布明确的下一次全局重置时间", sourceUrl: "https://codex-reset.com/zh/", checkedAt: Date.now() } };
+      } else if (message.method === "tools/call" && message.params.name === "stop_active_tasks") {
+        document.getElementById("dispatch").textContent = "MOCK STOP RECEIVED // no real interruption";
+        result = { structuredContent: { activeCount: 2, stoppedCount: 2, failedCount: 0 } };
+      } else if (message.method === "tools/call" && message.params.name === "prepare_batch") {
+        result = {
+          structuredContent: {
+            planId: "silo-mock-plan", selectedCount: message.params.arguments.tasks.length,
+            jobId: "native-mock-job",
+            concurrency: message.params.arguments.concurrency,
+            dispatchMessage: "执行已确认的 SILO 批次 silo-mock-plan。"
+          }
+        };
+      } else if (message.method === "tools/call" && message.params.name === "read_native_job") {
+        nativeReads += 1;
+        var nativeDone = nativeReads >= 4;
+        var requestedJobId = message.params.arguments.jobId || "native-mock-job";
+        var requestedPlanId = requestedJobId === "native-restored-job" ? "silo-restored-plan" : "silo-mock-plan";
+        result = {
+          structuredContent: {
+            id: requestedJobId, planId: requestedPlanId, status: nativeDone ? "completed" : "running",
+            total: 1, running: nativeDone ? 0 : 1, completed: nativeDone ? 1 : 0, failed: 0, skipped: 0,
+            targets: [{ threadId: "thread-a", title: "完善 MemoryRush 实验控制器", status: nativeDone ? "completed" : "running", phase: nativeDone ? "finished" : "sent" }]
+          }
+        };
+      } else if (message.method === "tools/call" && message.params.name === "list_native_jobs") {
+        result = {
+          structuredContent: {
+            jobs: [{
+              id: "native-restored-job", planId: "silo-restored-plan", status: "running",
+              total: 1, pending: 0, running: 1, completed: 0, failed: 0, skipped: 0,
+              updatedAt: Date.now(),
+              targets: [{ threadId: "thread-a", title: "完善 MemoryRush 实验控制器", cwd: "C:\\MemoryRush", status: "running", phase: "monitoring" }]
+            }]
+          }
+        };
+      } else if (message.method === "tools/call" && message.params.name === "open_external_panel") {
+        document.getElementById("dispatch").textContent = "MOCK EXTERNAL PANEL REQUESTED // no window opened";
+        result = { structuredContent: { status: "opening", surface: "external" } };
+      } else if (message.method === "ui/message") {
+        document.getElementById("dispatch").textContent = "MOCK DISPATCH RECEIVED // " + message.params.content[0].text;
+        result = { accepted: true, messageVisible: true };
+      } else {
+        result = { ok: true };
+      }
+      event.source.postMessage({ jsonrpc: "2.0", id: message.id, result: result }, "*");
+    });
+  </script>
+</body>
+</html>

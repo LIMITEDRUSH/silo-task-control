@@ -1,0 +1,7 @@
+interface:
+  display_name: "SILO Task Control"
+  short_description: "Scan and batch-continue existing Codex tasks"
+  brand_color: "#D97757"
+  default_prompt: "Use $silo-task-control to open my Codex task control panel."
+policy:
+  allow_implicit_invocation: true

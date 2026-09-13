@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "silo_task_control": {
+      "command": "node",
+      "args": ["./dist/server.mjs"],
+      "cwd": ".",
+      "enabled": true,
+      "default_tools_approval_mode": "approve",
+      "env_vars": [
+        "CODEX_CLI_PATH",
+        "CODEX_HOME",
+        "USERPROFILE",
+        "LOCALAPPDATA",
+        "PATH"
+      ],
+      "startup_timeout_sec": 20,
+      "tool_timeout_sec": 900
+    }
+  }
+}
