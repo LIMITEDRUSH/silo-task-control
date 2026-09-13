@@ -117,6 +117,31 @@ test("does not duplicate Burn when the reviewed preview already contains it", ()
   assert.equal(prompt.match(/Burn 执行策略｜已开启/g)?.length, 1);
 });
 
+test("uses English for previews, Burn, and dispatch when selected", () => {
+  const store = new PlanStore(inventoryWith([runnable]));
+  const preview = store.preview({
+    id: runnable.id,
+    mode: "optimize",
+    locale: "en",
+    burn: true,
+  });
+  assert.equal(preview.modeLabel, "Optimize");
+  assert.match(preview.prompt, /\[Task context\]/);
+  assert.match(preview.prompt, /evidence-based improvement pass/);
+  assert.equal(preview.prompt.match(/\[Burn execution strategy \| On\]/g)?.length, 1);
+
+  const prepared = store.prepare({
+    tasks: [{ id: runnable.id, mode: "optimize", prompt: preview.prompt, burn: true }],
+    concurrency: 1,
+    locale: "en",
+    confirmed: true,
+  });
+  const plan = store.get(prepared.planId);
+  assert.equal(plan.locale, "en");
+  assert.equal(plan.targets[0].prompt.match(/\[Burn execution strategy \| On\]/g)?.length, 1);
+  assert.match(prepared.dispatchMessage, /^Execute confirmed SILO batch/);
+});
+
 test("rejects missing confirmation and duplicate IDs", () => {
   const store = new PlanStore(inventoryWith([runnable]));
   assert.throws(

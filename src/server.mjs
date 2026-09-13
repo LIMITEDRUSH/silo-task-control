@@ -350,6 +350,7 @@ server.registerTool(
     inputSchema: {
       id: z.string().min(6).max(128),
       mode: z.enum(["continue", "optimize", "burn"]),
+      locale: z.enum(["zh-CN", "en"]).default("zh-CN"),
       burn: z.boolean().default(false),
       additionalPrompt: z.string().max(1000).default(""),
     },
@@ -450,6 +451,7 @@ server.registerTool(
       model: z.enum(["preserve", "gpt-6-astra", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.5", "gpt-5.4-mini", "gpt-5.3-codex-spark"]).default("preserve"),
       thinking: z.enum(["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"]).optional(),
       additionalPrompt: z.string().max(1000).default(""),
+      locale: z.enum(["zh-CN", "en"]).default("zh-CN"),
       confirmed: z.literal(true),
     },
     annotations: {

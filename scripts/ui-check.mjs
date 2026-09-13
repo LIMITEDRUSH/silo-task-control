@@ -22,6 +22,7 @@ for (const id of [
   "viewCompletedCount",
   "smartSelect",
   "globalBurn",
+  "languageSwitch",
   "folderList",
   "inspectorBody",
   "quotaMonitor",
@@ -40,6 +41,10 @@ for (const id of [
 ]) {
   assert.match(html, new RegExp(`id=["']${id}["']`), `missing required control #${id}`);
 }
+assert.match(html, /id=["']languageDialog["']/);
+assert.match(html, /localStorage\.getItem\(localeKey\)/);
+assert.match(html, /locale:locale.*preview_task_prompt|preview_task_prompt.*locale:locale/s);
+assert.match(html, /prepare_batch.*locale:locale/s);
 
 assert.doesNotMatch(html, /id=["']projectCount["']/);
 assert.doesNotMatch(html, /id=["']runnableCount["']/);

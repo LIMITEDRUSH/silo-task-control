@@ -37935,6 +37935,26 @@ var TASK_MODES = Object.freeze({
     prompt: "\u3010Burn \u6267\u884C\u7B56\u7565\uFF5C\u5DF2\u5F00\u542F\u3011\n- \u4EE5\u541E\u5410\u91CF\u4F18\u5148\uFF0C\u4F46\u4E0D\u964D\u4F4E\u6B63\u786E\u6027\u3001\u9A8C\u8BC1\u5F3A\u5EA6\u6216\u5B89\u5168\u8FB9\u754C\u3002\n- \u5C06\u4E92\u4E0D\u51B2\u7A81\u3001\u53EF\u72EC\u7ACB\u9A8C\u8BC1\u7684\u5DE5\u4F5C\u5E76\u884C\u63A8\u8FDB\uFF1B\u53EA\u6709\u786E\u5B9E\u80FD\u7F29\u77ED\u5173\u952E\u8DEF\u5F84\u65F6\u624D\u4F7F\u7528\u5B50\u4EE3\u7406\u3002\n- \u907F\u514D\u7B49\u5F85\u5F0F\u53D9\u8FF0\u3001\u91CD\u590D\u68C0\u67E5\u548C\u5DF2\u6709\u4E0A\u4E0B\u6587\u80FD\u591F\u56DE\u7B54\u7684\u63D0\u95EE\u3002\n- \u4E3B\u52A8\u6574\u5408\u6240\u6709\u5E76\u884C\u7ED3\u679C\uFF0C\u6301\u7EED\u63A8\u8FDB\u5230\u76EE\u6807\u5B8C\u6210\uFF0C\u5E76\u62A5\u544A\u53EF\u6838\u9A8C\u7684\u8BC1\u636E\u4E0E\u6B8B\u4F59\u98CE\u9669\u3002"
   }
 });
+var EN_TASK_MODES = Object.freeze({
+  continue: {
+    label: "Continue",
+    prompt: "[Objective]\nContinue the current task until the user's goal is genuinely complete.\n\n[Requirements]\n1. Read the full conversation, current plan, workspace state, and latest result; distinguish completed work from remaining work.\n2. Continue from the highest-value unfinished item. Do not repeat completed work or ask for context already provided.\n3. Implement the required changes directly and run checks or tests proportional to the risk.\n4. If blocked, exhaust safe alternatives that remain within scope.\n\n[Done when]\nDeliver a verifiable result and briefly state what changed, the evidence from verification, and anything that still requires manual action."
+  },
+  optimize: {
+    label: "Optimize",
+    prompt: "[Objective]\nRun an evidence-based improvement pass while preserving useful existing work.\n\n[Requirements]\n1. Inspect the full conversation, current implementation, uncommitted changes, test results, and prior conclusions.\n2. Identify the highest-impact correctness, reliability, performance, maintainability, or usability issues and rank them by value.\n3. Fix the highest-value issues first. Avoid unsupported rewrites, cosmetic churn, or scope expansion.\n4. Verify each material change and check for regressions.\n\n[Done when]\nState the improvements, verification evidence, and residual risks. Stop only when no necessary follow-up remains."
+  },
+  burn: {
+    label: "Burn",
+    prompt: "[Burn execution strategy | On]\n- Prioritize throughput without weakening correctness, verification, or safety boundaries.\n- Run independent, non-conflicting, independently verifiable work in parallel; use subagents only when they shorten the critical path.\n- Avoid wait narration, repeated checks, and questions already answered by the available context.\n- Integrate every parallel result, keep moving until the objective is complete, and report verifiable evidence and residual risks."
+  }
+});
+function normalizeLocale(locale) {
+  return locale === "en" ? "en" : "zh-CN";
+}
+function taskModesFor(locale) {
+  return normalizeLocale(locale) === "en" ? EN_TASK_MODES : TASK_MODES;
+}
 var MODEL_PROFILES = Object.freeze({
   preserve: { label: "\u4FDD\u6301\u5404\u4EFB\u52A1\u73B0\u6709\u6A21\u578B", model: null, thinking: null },
   spark: { label: "Spark \u6781\u901F", model: "gpt-5.3-codex-spark", thinking: "xhigh" },
@@ -37963,8 +37983,9 @@ var MODEL_EFFORTS = Object.freeze({
 var CONCURRENCY_LEVELS = /* @__PURE__ */ new Set([1, 2, 4, 8]);
 var PLAN_TTL_MS = 15 * 60 * 1e3;
 var MAX_PROMPT_LENGTH = 6e3;
-function buildTaskPrompt(mode, additionalPrompt = "", promptOverride, burn = false) {
-  const definition = TASK_MODES[mode];
+function buildTaskPrompt(mode, additionalPrompt = "", promptOverride, burn = false, locale = "zh-CN") {
+  const localizedModes = taskModesFor(locale);
+  const definition = localizedModes[mode];
   if (!definition) throw new Error(`\u65E0\u6548\u4EFB\u52A1\u6A21\u5F0F\uFF1A${mode}`);
   const hasOverride = promptOverride !== void 0 && promptOverride !== null;
   const override = hasOverride ? String(promptOverride).trim() : "";
@@ -37974,28 +37995,38 @@ function buildTaskPrompt(mode, additionalPrompt = "", promptOverride, burn = fal
   if (hasOverride && !override) throw new Error("\u81EA\u5B9A\u4E49\u4EFB\u52A1\u6307\u4EE4\u4E0D\u80FD\u4E3A\u7A7A");
   const extra = String(additionalPrompt || "").trim();
   const base = hasOverride ? override : definition.prompt;
-  const hasBurnDirective = base.includes("\u3010Burn \u6267\u884C\u7B56\u7565\uFF5C\u5DF2\u5F00\u542F\u3011");
+  const hasBurnDirective = base.includes("\u3010Burn \u6267\u884C\u7B56\u7565\uFF5C\u5DF2\u5F00\u542F\u3011") || base.includes("[Burn execution strategy | On]");
   const burnPrompt = burn && !hasBurnDirective ? `
 
-${TASK_MODES.burn.prompt}` : "";
+${localizedModes.burn.prompt}` : "";
+  const extraHeading = normalizeLocale(locale) === "en" ? "[Additional batch instructions]" : "\u3010\u672C\u6279\u6B21\u9644\u52A0\u8981\u6C42\u3011";
   const extraPrompt = !hasOverride && extra ? `
 
-\u3010\u672C\u6279\u6B21\u9644\u52A0\u8981\u6C42\u3011
+${extraHeading}
 ${extra}` : "";
   return `${base}${burnPrompt}${extraPrompt}`;
 }
-function contextualPrompt(task, mode, additionalPrompt, burn, conversation = {}) {
+function contextualPrompt(task, mode, additionalPrompt, burn, conversation = {}, locale = "zh-CN") {
+  const english = normalizeLocale(locale) === "en";
+  const separator = english ? ": " : "\uFF1A";
   const context = [
-    `\u4EFB\u52A1\uFF1A${task.title}`,
-    conversation.user ? `\u6700\u8FD1\u7528\u6237\u76EE\u6807\uFF1A${conversation.user}` : task.preview ? `\u6700\u8FD1\u8BF7\u6C42\u6458\u8981\uFF1A${task.preview}` : "",
-    conversation.agent ? `\u6700\u8FD1\u6267\u884C\u7ED3\u679C\uFF1A${conversation.agent}` : "",
-    task.cwd ? `\u5DE5\u4F5C\u76EE\u5F55\uFF1A${task.cwd}` : "",
-    task.lastTurnStatus ? `\u6700\u8FD1\u56DE\u5408\u72B6\u6001\uFF1A${task.lastTurnStatus}` : ""
+    `${english ? "Task" : "\u4EFB\u52A1"}${separator}${task.title}`,
+    conversation.user ? `${english ? "Latest user objective" : "\u6700\u8FD1\u7528\u6237\u76EE\u6807"}${separator}${conversation.user}` : task.preview ? `${english ? "Latest request summary" : "\u6700\u8FD1\u8BF7\u6C42\u6458\u8981"}${separator}${task.preview}` : "",
+    conversation.agent ? `${english ? "Latest execution result" : "\u6700\u8FD1\u6267\u884C\u7ED3\u679C"}${separator}${conversation.agent}` : "",
+    task.cwd ? `${english ? "Working directory" : "\u5DE5\u4F5C\u76EE\u5F55"}${separator}${task.cwd}` : "",
+    task.lastTurnStatus ? `${english ? "Latest turn status" : "\u6700\u8FD1\u56DE\u5408\u72B6\u6001"}${separator}${task.lastTurnStatus}` : ""
   ].filter(Boolean).join("\n");
+  if (english) return `[Task context]
+${context}
+
+${buildTaskPrompt(mode, additionalPrompt, void 0, burn, locale)}
+
+[Context check]
+Before starting, compare this summary with the full conversation. If they conflict, trust the full conversation and current workspace evidence.`;
   return `\u3010\u4EFB\u52A1\u4E0A\u4E0B\u6587\u3011
 ${context}
 
-${buildTaskPrompt(mode, additionalPrompt, void 0, burn)}
+${buildTaskPrompt(mode, additionalPrompt, void 0, burn, locale)}
 
 \u3010\u4E0A\u4E0B\u6587\u6821\u9A8C\u3011
 \u5F00\u59CB\u524D\u6838\u5BF9\u4E0A\u8FF0\u6458\u8981\u4E0E\u5B8C\u6574\u5BF9\u8BDD\uFF1B\u5982\u6709\u51B2\u7A81\uFF0C\u4EE5\u5B8C\u6574\u5BF9\u8BDD\u548C\u5F53\u524D\u5DE5\u4F5C\u533A\u8BC1\u636E\u4E3A\u51C6\u3002`;
@@ -38014,12 +38045,14 @@ var PlanStore = class {
     if (!TASK_MODES[mode]) throw new Error(`\u65E0\u6548\u4EFB\u52A1\u6A21\u5F0F\uFF1A${mode}`);
     const additionalPrompt = String(payload.additionalPrompt || "").trim();
     if (additionalPrompt.length > 1e3) throw new Error("\u9644\u52A0\u6307\u4EE4\u6700\u591A 1000 \u4E2A\u5B57\u7B26");
+    const locale = normalizeLocale(payload.locale);
+    const localizedModes = taskModesFor(locale);
     return {
       id: task.id,
       title: task.title,
       mode,
-      modeLabel: TASK_MODES[mode].label,
-      prompt: contextualPrompt(task, mode, additionalPrompt, Boolean(payload.burn)),
+      modeLabel: localizedModes[mode].label,
+      prompt: contextualPrompt(task, mode, additionalPrompt, Boolean(payload.burn), {}, locale),
       maxLength: MAX_PROMPT_LENGTH
     };
   }
@@ -38031,16 +38064,19 @@ var PlanStore = class {
     const additionalPrompt = String(payload.additionalPrompt || "").trim();
     if (additionalPrompt.length > 1e3) throw new Error("\u9644\u52A0\u6307\u4EE4\u6700\u591A 1000 \u4E2A\u5B57\u7B26");
     const conversation = await this.inventory.readTaskContext(payload.id);
+    const locale = normalizeLocale(payload.locale);
+    const localizedModes = taskModesFor(locale);
     return {
       id: task.id,
       title: task.title,
       mode,
-      modeLabel: TASK_MODES[mode].label,
-      prompt: contextualPrompt(task, mode, additionalPrompt, Boolean(payload.burn), conversation),
+      modeLabel: localizedModes[mode].label,
+      prompt: contextualPrompt(task, mode, additionalPrompt, Boolean(payload.burn), conversation, locale),
       maxLength: MAX_PROMPT_LENGTH
     };
   }
   prepare(payload = {}) {
+    const locale = normalizeLocale(payload.locale);
     const requested = Array.isArray(payload.tasks) ? payload.tasks : [];
     if (!requested.length) throw new Error("\u81F3\u5C11\u9009\u62E9\u4E00\u4E2A\u4EFB\u52A1");
     if (requested.length > 50) throw new Error("\u5355\u6B21\u6700\u591A\u9009\u62E9 50 \u4E2A\u4EFB\u52A1");
@@ -38078,7 +38114,7 @@ var PlanStore = class {
         title: task.title,
         cwd: task.cwd,
         mode: item.mode,
-        prompt: item.prompt !== void 0 ? buildTaskPrompt(item.mode, additionalPrompt, item.prompt, Boolean(item.burn)) : contextualPrompt(task, item.mode, additionalPrompt, Boolean(item.burn)),
+        prompt: item.prompt !== void 0 ? buildTaskPrompt(item.mode, additionalPrompt, item.prompt, Boolean(item.burn), locale) : contextualPrompt(task, item.mode, additionalPrompt, Boolean(item.burn), {}, locale),
         burn: Boolean(item.burn),
         modelOverride: MODELS[itemModelKey].model ? { model: MODELS[itemModelKey].model, thinking: itemThinking } : null,
         collisionRisk: Boolean(task.collisionRisk)
@@ -38093,6 +38129,7 @@ var PlanStore = class {
       createdAt: now,
       expiresAt: now + this.ttlMs,
       concurrency,
+      locale,
       modelProfile,
       modelOverride: selectedModel.model ? { model: selectedModel.model, thinking: thinking || "medium" } : profile.model ? { model: profile.model, thinking: profile.thinking } : null,
       targets,
@@ -38121,7 +38158,7 @@ var PlanStore = class {
       modelLabel: profile.label,
       model: modelKey,
       thinking,
-      dispatchMessage: `\u6267\u884C\u5DF2\u786E\u8BA4\u7684 SILO \u6279\u6B21 ${id}\uFF08\u539F\u751F job ${job?.id || "\u672A\u542F\u7528"}\uFF09\u3002\u4F7F\u7528 $silo-task-control\uFF0C\u8C03\u7528 get_batch_plan \u4E0E read_native_batch_job({planId}) \u53D6\u56DE\u6743\u5A01\u8BA1\u5212\u548C job\uFF0C\u7136\u540E\u4E25\u683C\u6309\u8BE5 skill \u7684 Native Dispatch \u6D41\u7A0B\uFF0C\u7528 Codex \u539F\u751F\u4EFB\u52A1\u5DE5\u5177\u9884\u68C0\u3001claim\u3001\u53D1\u9001\uFF1B\u53D1\u9001\u5DE5\u5177\u6210\u529F\u8FD4\u56DE\u540E\u7ACB\u5373\u628A\u76EE\u6807\u56DE\u5199\u4E3A running/sent\uFF0C\u786E\u8BA4\u6D88\u606F\u5DF2\u663E\u793A\u5728\u5BF9\u5E94 Codex \u4EFB\u52A1\uFF0C\u518D\u7B49\u5F85\u5E76\u6301\u7EED\u56DE\u5199\u3002\u4E0D\u8981\u521B\u5EFA\u65B0\u4EFB\u52A1\uFF0C\u4E0D\u8981\u5904\u7406\u8BA1\u5212\u5916\u4EFB\u52A1\uFF0C\u4E0D\u8981\u518D\u6B21\u8BE2\u95EE\u786E\u8BA4\uFF1B\u6700\u540E\u62A5\u544A\u5DF2\u53D1\u9001\u3001\u8DF3\u8FC7\u548C\u5931\u8D25\u6570\u91CF\u3002`
+      dispatchMessage: locale === "en" ? `Execute confirmed SILO batch ${id} (native job ${job?.id || "unavailable"}). Use $silo-task-control to call get_batch_plan and read_native_batch_job({planId}), then follow the skill's Native Dispatch workflow exactly. Preflight, claim, and send with native Codex task tools; after send succeeds, immediately record the target as running/sent, then wait and keep recording progress. Do not create tasks, touch targets outside the plan, or request confirmation again. Finally report sent, skipped, and failed counts.` : `\u6267\u884C\u5DF2\u786E\u8BA4\u7684 SILO \u6279\u6B21 ${id}\uFF08\u539F\u751F job ${job?.id || "\u672A\u542F\u7528"}\uFF09\u3002\u4F7F\u7528 $silo-task-control\uFF0C\u8C03\u7528 get_batch_plan \u4E0E read_native_batch_job({planId}) \u53D6\u56DE\u6743\u5A01\u8BA1\u5212\u548C job\uFF0C\u7136\u540E\u4E25\u683C\u6309\u8BE5 skill \u7684 Native Dispatch \u6D41\u7A0B\uFF0C\u7528 Codex \u539F\u751F\u4EFB\u52A1\u5DE5\u5177\u9884\u68C0\u3001claim\u3001\u53D1\u9001\uFF1B\u53D1\u9001\u5DE5\u5177\u6210\u529F\u8FD4\u56DE\u540E\u7ACB\u5373\u628A\u76EE\u6807\u56DE\u5199\u4E3A running/sent\uFF0C\u786E\u8BA4\u6D88\u606F\u5DF2\u663E\u793A\u5728\u5BF9\u5E94 Codex \u4EFB\u52A1\uFF0C\u518D\u7B49\u5F85\u5E76\u6301\u7EED\u56DE\u5199\u3002\u4E0D\u8981\u521B\u5EFA\u65B0\u4EFB\u52A1\uFF0C\u4E0D\u8981\u5904\u7406\u8BA1\u5212\u5916\u4EFB\u52A1\uFF0C\u4E0D\u8981\u518D\u6B21\u8BE2\u95EE\u786E\u8BA4\uFF1B\u6700\u540E\u62A5\u544A\u5DF2\u53D1\u9001\u3001\u8DF3\u8FC7\u548C\u5931\u8D25\u6570\u91CF\u3002`
     };
   }
   get(id) {
@@ -38521,6 +38558,7 @@ server.registerTool(
     inputSchema: {
       id: external_exports.string().min(6).max(128),
       mode: external_exports.enum(["continue", "optimize", "burn"]),
+      locale: external_exports.enum(["zh-CN", "en"]).default("zh-CN"),
       burn: external_exports.boolean().default(false),
       additionalPrompt: external_exports.string().max(1e3).default("")
     },
@@ -38614,6 +38652,7 @@ server.registerTool(
       model: external_exports.enum(["preserve", "gpt-6-astra", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna", "gpt-5.5", "gpt-5.4-mini", "gpt-5.3-codex-spark"]).default("preserve"),
       thinking: external_exports.enum(["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"]).optional(),
       additionalPrompt: external_exports.string().max(1e3).default(""),
+      locale: external_exports.enum(["zh-CN", "en"]).default("zh-CN"),
       confirmed: external_exports.literal(true)
     },
     annotations: {

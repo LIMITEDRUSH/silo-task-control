@@ -18,6 +18,32 @@ export const TASK_MODES = Object.freeze({
   },
 });
 
+const EN_TASK_MODES = Object.freeze({
+  continue: {
+    label: "Continue",
+    prompt:
+      "[Objective]\nContinue the current task until the user's goal is genuinely complete.\n\n[Requirements]\n1. Read the full conversation, current plan, workspace state, and latest result; distinguish completed work from remaining work.\n2. Continue from the highest-value unfinished item. Do not repeat completed work or ask for context already provided.\n3. Implement the required changes directly and run checks or tests proportional to the risk.\n4. If blocked, exhaust safe alternatives that remain within scope.\n\n[Done when]\nDeliver a verifiable result and briefly state what changed, the evidence from verification, and anything that still requires manual action.",
+  },
+  optimize: {
+    label: "Optimize",
+    prompt:
+      "[Objective]\nRun an evidence-based improvement pass while preserving useful existing work.\n\n[Requirements]\n1. Inspect the full conversation, current implementation, uncommitted changes, test results, and prior conclusions.\n2. Identify the highest-impact correctness, reliability, performance, maintainability, or usability issues and rank them by value.\n3. Fix the highest-value issues first. Avoid unsupported rewrites, cosmetic churn, or scope expansion.\n4. Verify each material change and check for regressions.\n\n[Done when]\nState the improvements, verification evidence, and residual risks. Stop only when no necessary follow-up remains.",
+  },
+  burn: {
+    label: "Burn",
+    prompt:
+      "[Burn execution strategy | On]\n- Prioritize throughput without weakening correctness, verification, or safety boundaries.\n- Run independent, non-conflicting, independently verifiable work in parallel; use subagents only when they shorten the critical path.\n- Avoid wait narration, repeated checks, and questions already answered by the available context.\n- Integrate every parallel result, keep moving until the objective is complete, and report verifiable evidence and residual risks.",
+  },
+});
+
+function normalizeLocale(locale) {
+  return locale === "en" ? "en" : "zh-CN";
+}
+
+function taskModesFor(locale) {
+  return normalizeLocale(locale) === "en" ? EN_TASK_MODES : TASK_MODES;
+}
+
 export const MODEL_PROFILES = Object.freeze({
   preserve: { label: "保持各任务现有模型", model: null, thinking: null },
   spark: { label: "Spark 极速", model: "gpt-5.3-codex-spark", thinking: "xhigh" },
@@ -49,8 +75,9 @@ const CONCURRENCY_LEVELS = new Set([1, 2, 4, 8]);
 const PLAN_TTL_MS = 15 * 60 * 1000;
 const MAX_PROMPT_LENGTH = 6000;
 
-export function buildTaskPrompt(mode, additionalPrompt = "", promptOverride, burn = false) {
-  const definition = TASK_MODES[mode];
+export function buildTaskPrompt(mode, additionalPrompt = "", promptOverride, burn = false, locale = "zh-CN") {
+  const localizedModes = taskModesFor(locale);
+  const definition = localizedModes[mode];
   if (!definition) throw new Error(`无效任务模式：${mode}`);
   const hasOverride = promptOverride !== undefined && promptOverride !== null;
   const override = hasOverride ? String(promptOverride).trim() : "";
@@ -60,21 +87,25 @@ export function buildTaskPrompt(mode, additionalPrompt = "", promptOverride, bur
   if (hasOverride && !override) throw new Error("自定义任务指令不能为空");
   const extra = String(additionalPrompt || "").trim();
   const base = hasOverride ? override : definition.prompt;
-  const hasBurnDirective = base.includes("【Burn 执行策略｜已开启】");
-  const burnPrompt = burn && !hasBurnDirective ? `\n\n${TASK_MODES.burn.prompt}` : "";
-  const extraPrompt = !hasOverride && extra ? `\n\n【本批次附加要求】\n${extra}` : "";
+  const hasBurnDirective = base.includes("【Burn 执行策略｜已开启】") || base.includes("[Burn execution strategy | On]");
+  const burnPrompt = burn && !hasBurnDirective ? `\n\n${localizedModes.burn.prompt}` : "";
+  const extraHeading = normalizeLocale(locale) === "en" ? "[Additional batch instructions]" : "【本批次附加要求】";
+  const extraPrompt = !hasOverride && extra ? `\n\n${extraHeading}\n${extra}` : "";
   return `${base}${burnPrompt}${extraPrompt}`;
 }
 
-function contextualPrompt(task, mode, additionalPrompt, burn, conversation = {}) {
+function contextualPrompt(task, mode, additionalPrompt, burn, conversation = {}, locale = "zh-CN") {
+  const english = normalizeLocale(locale) === "en";
+  const separator = english ? ": " : "：";
   const context = [
-    `任务：${task.title}`,
-    conversation.user ? `最近用户目标：${conversation.user}` : task.preview ? `最近请求摘要：${task.preview}` : "",
-    conversation.agent ? `最近执行结果：${conversation.agent}` : "",
-    task.cwd ? `工作目录：${task.cwd}` : "",
-    task.lastTurnStatus ? `最近回合状态：${task.lastTurnStatus}` : "",
+    `${english ? "Task" : "任务"}${separator}${task.title}`,
+    conversation.user ? `${english ? "Latest user objective" : "最近用户目标"}${separator}${conversation.user}` : task.preview ? `${english ? "Latest request summary" : "最近请求摘要"}${separator}${task.preview}` : "",
+    conversation.agent ? `${english ? "Latest execution result" : "最近执行结果"}${separator}${conversation.agent}` : "",
+    task.cwd ? `${english ? "Working directory" : "工作目录"}${separator}${task.cwd}` : "",
+    task.lastTurnStatus ? `${english ? "Latest turn status" : "最近回合状态"}${separator}${task.lastTurnStatus}` : "",
   ].filter(Boolean).join("\n");
-  return `【任务上下文】\n${context}\n\n${buildTaskPrompt(mode, additionalPrompt, undefined, burn)}\n\n【上下文校验】\n开始前核对上述摘要与完整对话；如有冲突，以完整对话和当前工作区证据为准。`;
+  if (english) return `[Task context]\n${context}\n\n${buildTaskPrompt(mode, additionalPrompt, undefined, burn, locale)}\n\n[Context check]\nBefore starting, compare this summary with the full conversation. If they conflict, trust the full conversation and current workspace evidence.`;
+  return `【任务上下文】\n${context}\n\n${buildTaskPrompt(mode, additionalPrompt, undefined, burn, locale)}\n\n【上下文校验】\n开始前核对上述摘要与完整对话；如有冲突，以完整对话和当前工作区证据为准。`;
 }
 
 export class PlanStore {
@@ -92,12 +123,14 @@ export class PlanStore {
     if (!TASK_MODES[mode]) throw new Error(`无效任务模式：${mode}`);
     const additionalPrompt = String(payload.additionalPrompt || "").trim();
     if (additionalPrompt.length > 1000) throw new Error("附加指令最多 1000 个字符");
+    const locale = normalizeLocale(payload.locale);
+    const localizedModes = taskModesFor(locale);
     return {
       id: task.id,
       title: task.title,
       mode,
-      modeLabel: TASK_MODES[mode].label,
-      prompt: contextualPrompt(task, mode, additionalPrompt, Boolean(payload.burn)),
+      modeLabel: localizedModes[mode].label,
+      prompt: contextualPrompt(task, mode, additionalPrompt, Boolean(payload.burn), {}, locale),
       maxLength: MAX_PROMPT_LENGTH,
     };
   }
@@ -110,17 +143,20 @@ export class PlanStore {
     const additionalPrompt = String(payload.additionalPrompt || "").trim();
     if (additionalPrompt.length > 1000) throw new Error("附加指令最多 1000 个字符");
     const conversation = await this.inventory.readTaskContext(payload.id);
+    const locale = normalizeLocale(payload.locale);
+    const localizedModes = taskModesFor(locale);
     return {
       id: task.id,
       title: task.title,
       mode,
-      modeLabel: TASK_MODES[mode].label,
-      prompt: contextualPrompt(task, mode, additionalPrompt, Boolean(payload.burn), conversation),
+      modeLabel: localizedModes[mode].label,
+      prompt: contextualPrompt(task, mode, additionalPrompt, Boolean(payload.burn), conversation, locale),
       maxLength: MAX_PROMPT_LENGTH,
     };
   }
 
   prepare(payload = {}) {
+    const locale = normalizeLocale(payload.locale);
     const requested = Array.isArray(payload.tasks) ? payload.tasks : [];
     if (!requested.length) throw new Error("至少选择一个任务");
     if (requested.length > 50) throw new Error("单次最多选择 50 个任务");
@@ -161,8 +197,8 @@ export class PlanStore {
         cwd: task.cwd,
         mode: item.mode,
         prompt: item.prompt !== undefined
-          ? buildTaskPrompt(item.mode, additionalPrompt, item.prompt, Boolean(item.burn))
-          : contextualPrompt(task, item.mode, additionalPrompt, Boolean(item.burn)),
+          ? buildTaskPrompt(item.mode, additionalPrompt, item.prompt, Boolean(item.burn), locale)
+          : contextualPrompt(task, item.mode, additionalPrompt, Boolean(item.burn), {}, locale),
         burn: Boolean(item.burn),
         modelOverride: MODELS[itemModelKey].model
           ? { model: MODELS[itemModelKey].model, thinking: itemThinking }
@@ -180,6 +216,7 @@ export class PlanStore {
       createdAt: now,
       expiresAt: now + this.ttlMs,
       concurrency,
+      locale,
       modelProfile,
       modelOverride: selectedModel.model
         ? { model: selectedModel.model, thinking: thinking || "medium" }
@@ -213,7 +250,9 @@ export class PlanStore {
       modelLabel: profile.label,
       model: modelKey,
       thinking,
-      dispatchMessage:
+      dispatchMessage: locale === "en" ?
+        `Execute confirmed SILO batch ${id} (native job ${job?.id || "unavailable"}). ` +
+        "Use $silo-task-control to call get_batch_plan and read_native_batch_job({planId}), then follow the skill's Native Dispatch workflow exactly. Preflight, claim, and send with native Codex task tools; after send succeeds, immediately record the target as running/sent, then wait and keep recording progress. Do not create tasks, touch targets outside the plan, or request confirmation again. Finally report sent, skipped, and failed counts." :
         `执行已确认的 SILO 批次 ${id}（原生 job ${job?.id || "未启用"}）。` +
         "使用 $silo-task-control，调用 get_batch_plan 与 read_native_batch_job({planId}) 取回权威计划和 job，然后严格按该 skill 的 Native Dispatch 流程，" +
         "用 Codex 原生任务工具预检、claim、发送；发送工具成功返回后立即把目标回写为 running/sent，确认消息已显示在对应 Codex 任务，再等待并持续回写。" +
