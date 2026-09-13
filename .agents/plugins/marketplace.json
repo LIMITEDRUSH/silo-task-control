@@ -7,8 +7,9 @@
     {
       "name": "silo-task-control",
       "source": {
-        "source": "local",
-        "path": "./"
+        "source": "url",
+        "url": "https://github.com/LIMITEDRUSH/silo-task-control.git",
+        "ref": "main"
       },
       "policy": {
         "installation": "AVAILABLE",

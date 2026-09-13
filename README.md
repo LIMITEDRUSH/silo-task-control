@@ -2,7 +2,7 @@
 
 SILO is a local Codex plugin for scanning existing Codex tasks across projects, choosing **Continue** or **Optimize** per task, and dispatching a confirmed batch through Codex's native task tools.
 
-Current release: **v0.2.1** (`0.2.1+codex.20260913`)
+Current release: **v0.2.2** (`0.2.2+codex.20260913`)
 
 ## Install from GitHub
 
