@@ -3476,7 +3476,7 @@ var init_schemas = __esm({
             doc.write(`
         if (${id}.issues.length) {${prefixStr(id, k2)}
         }
-        
+
         if (${id}.value === undefined) {
           if (${isPresent}) {
             newResult[${k2}] = undefined;

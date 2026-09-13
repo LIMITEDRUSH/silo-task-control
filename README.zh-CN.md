@@ -4,7 +4,7 @@
 
 SILO 是一个简约、轻量的 Codex 控制面板，用于跨项目扫描现有任务、逐项检查将要发送的继续或优化提示词，并通过 Codex 原生任务工具启动用户确认过的批次。
 
-当前版本：**v0.3.1**（`0.3.1+codex.20260913`）
+当前版本：**v0.4.0**（`0.4.0+codex.20260913`）
 
 ## 安装
 
@@ -12,7 +12,9 @@ SILO 是一个简约、轻量的 Codex 控制面板，用于跨项目扫描现�
 
 ```powershell
 codex plugin marketplace add LIMITEDRUSH/silo-task-control
-codex plugin add silo-task-control@silo-plugins
+codex plugin add silo-cn@silo-plugins
+# 或安装固定英文版：
+codex plugin add silo-en@silo-plugins
 ```
 
 首次安装后重启 Codex。可以从侧边栏打开 **SILO**，也可以新建任务后输入：
@@ -21,13 +23,13 @@ codex plugin add silo-task-control@silo-plugins
 $silo-task-control 打开控制面板，扫描我现在的任务。
 ```
 
-SILO 面板首次打开时会要求选择 **简体中文** 或 **English**。该选择同时控制界面文案和默认任务提示词，并保存在本机；之后可通过顶部语言按钮随时切换。
+安装时二选一：`silo-cn` 的界面和默认任务提示词固定为简体中文，`silo-en` 固定为英文。面板内不再提供语言开关，避免同一安装在使用中意外混用语言。
 
 后续更新：
 
 ```powershell
 codex plugin marketplace upgrade silo-plugins
-codex plugin add silo-task-control@silo-plugins
+codex plugin add silo-cn@silo-plugins
 ```
 
 SILO 目前面向 Windows，需要 Codex Desktop 和 Node.js 22.5 或更高版本。

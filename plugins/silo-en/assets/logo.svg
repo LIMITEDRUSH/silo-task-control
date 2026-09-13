@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 180">
+  <rect width="720" height="180" rx="28" fill="#F7F7F8"/>
+  <rect x="34" y="34" width="112" height="112" rx="32" fill="#D97757"/>
+  <path d="M66 72h48M66 91h33M66 110h39" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="119" cy="110" r="11" fill="#fff"/>
+  <text x="178" y="85" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="46" font-weight="650" fill="#202123">SILO Task Control</text>
+  <text x="180" y="122" font-family="system-ui,-apple-system,Segoe UI,sans-serif" font-size="22" fill="#676B72">Manage and continue Codex tasks</text>
+</svg>

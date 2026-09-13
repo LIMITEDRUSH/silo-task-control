@@ -1,0 +1,31 @@
+{
+  "name": "silo-en",
+  "version": "0.4.0+codex.20260913",
+  "description": "SILO English scans, filters, batch-continues or optimizes Codex tasks, and keeps current activity and batch history visible.",
+  "author": {
+    "name": "LIMITEDRUSH"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "SILO English",
+    "shortDescription": "Manage Codex tasks from one lightweight panel.",
+    "longDescription": "SILO English scans, filters, batch-continues or optimizes Codex tasks, and keeps current activity and batch history visible.",
+    "developerName": "LIMITEDRUSH",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Task management",
+      "Local inventory",
+      "Quota monitoring"
+    ],
+    "defaultPrompt": [
+      "Open the SILO control panel and scan my current Codex tasks.",
+      "Show every Codex task that is currently running.",
+      "Use SILO Smart select and recommend tasks to continue or optimize."
+    ],
+    "brandColor": "#D97757",
+    "composerIcon": "./assets/icon.svg",
+    "logo": "./assets/logo.svg"
+  },
+  "mcpServers": "./.mcp.json"
+}

@@ -5,11 +5,22 @@
   },
   "plugins": [
     {
-      "name": "silo-task-control",
+      "name": "silo-cn",
       "source": {
-        "source": "url",
-        "url": "https://github.com/LIMITEDRUSH/silo-task-control.git",
-        "ref": "main"
+        "source": "local",
+        "path": "./plugins/silo-cn"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "silo-en",
+      "source": {
+        "source": "local",
+        "path": "./plugins/silo-en"
       },
       "policy": {
         "installation": "AVAILABLE",

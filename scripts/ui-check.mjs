@@ -22,7 +22,6 @@ for (const id of [
   "viewCompletedCount",
   "smartSelect",
   "globalBurn",
-  "languageSwitch",
   "folderList",
   "inspectorBody",
   "quotaMonitor",
@@ -31,6 +30,7 @@ for (const id of [
   "activityTab",
   "activityLiveDot",
   "activityList",
+  "historyList",
   "mobileActivity",
   "mobileActivitySummary",
   "hiddenSelection",
@@ -42,8 +42,10 @@ for (const id of [
 ]) {
   assert.match(html, new RegExp(`id=["']${id}["']`), `missing required control #${id}`);
 }
-assert.match(html, /id=["']languageDialog["']/);
-assert.match(html, /localStorage\.getItem\(localeKey\)/);
+assert.doesNotMatch(html, /id=["']languageDialog["']/);
+assert.doesNotMatch(html, /id=["']languageSwitch["']/);
+assert.doesNotMatch(html, /localeKey|silo\.locale/);
+assert.match(html, /packagedLocale=["']__SILO_DEFAULT_LOCALE__["']/);
 assert.match(html, /locale:locale.*preview_task_prompt|preview_task_prompt.*locale:locale/s);
 assert.match(html, /prepare_batch.*locale:locale/s);
 
@@ -61,7 +63,6 @@ assert.match(html, /\.rail-tabs>button:not\(\.close-inspector\):hover:not\(\.act
 assert.match(html, /@keyframes livePulse/);
 const headerActions = html.match(/<div class=["']header-actions["']>([\s\S]*?)<\/div>\s*<\/header>/)?.[1] || "";
 assert.doesNotMatch(headerActions, /id=["']languageSwitch["']/);
-assert.match(html, /<details class=["']rail-settings["']>[\s\S]*id=["']languageSwitch["']/);
 assert.match(html, /\.rail-settings\{display:block\}/, "settings must remain available without a selected task");
 assert.match(html, /\.advanced-settings\{display:none\}/, "avoid a duplicate task-only settings entry");
 assert.match(html, /role=["']progressbar["']/);
@@ -94,6 +95,10 @@ assert.match(html, /function observedTargets\(job\)[\s\S]*state\.jobs\.forEach/)
 assert.match(html, /function manageActivityTarget\(target\)/);
 assert.match(html, /row\.addEventListener\(["']click["'].*manageActivityTarget\(target\)/s);
 assert.match(html, /els\.activityLiveDot\.hidden=!runningIds\.size/);
+assert.match(html, /function renderHistory\(\)/);
+assert.match(html, /state\.inspectedJobId=job\.id/);
+assert.match(html, /requestNativeStatusSync\(false\)/);
+assert.match(html, /limit 200/);
 assert.match(html, /p\.liveThreads\|\|\[\][\s\S]*state\.runningTasks=new Map/);
 assert.match(html, /Codex 当前正在进行/);
 assert.match(html, /setInterval\(function\(\)\{void pollRunningTasks\(\)\},10000\)/);

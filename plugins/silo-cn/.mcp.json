@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "silo_cn": {
+      "command": "node",
+      "args": [
+        "./dist/server.mjs"
+      ],
+      "cwd": ".",
+      "enabled": true,
+      "default_tools_approval_mode": "approve",
+      "env": {
+        "SILO_DEFAULT_LOCALE": "zh-CN"
+      },
+      "env_vars": [
+        "CODEX_CLI_PATH",
+        "CODEX_HOME",
+        "USERPROFILE",
+        "LOCALAPPDATA",
+        "PATH"
+      ],
+      "startup_timeout_sec": 20,
+      "tool_timeout_sec": 900
+    }
+  }
+}

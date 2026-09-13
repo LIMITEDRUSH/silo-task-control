@@ -4,7 +4,7 @@
 
 SILO is a lightweight Codex control panel for scanning existing tasks across projects, reviewing the exact Continue or Optimize prompt for each task, and dispatching a confirmed batch through Codex's native task tools.
 
-Current release: **v0.3.1** (`0.3.1+codex.20260913`)
+Current release: **v0.4.0** (`0.4.0+codex.20260913`)
 
 ## Install
 
@@ -12,7 +12,9 @@ Add the GitHub repository as a Codex marketplace, then install SILO:
 
 ```powershell
 codex plugin marketplace add LIMITEDRUSH/silo-task-control
-codex plugin add silo-task-control@silo-plugins
+codex plugin add silo-en@silo-plugins
+# Or install the fixed Chinese edition:
+codex plugin add silo-cn@silo-plugins
 ```
 
 Restart Codex after the first installation. Open **SILO** from the sidebar or start a new task and ask:
@@ -21,13 +23,13 @@ Restart Codex after the first installation. Open **SILO** from the sidebar or st
 $silo-task-control Open the control panel and scan my current tasks.
 ```
 
-SILO asks you to choose **简体中文** or **English** the first time its panel opens. The choice controls both panel copy and generated task prompts, is remembered locally, and can be changed from the language button in the header.
+Choose exactly one edition during installation: `silo-en` fixes both the panel and generated prompts to English; `silo-cn` fixes both to Simplified Chinese. There is no in-panel language switch, so the interface cannot drift between languages.
 
 Update later with:
 
 ```powershell
 codex plugin marketplace upgrade silo-plugins
-codex plugin add silo-task-control@silo-plugins
+codex plugin add silo-en@silo-plugins
 ```
 
 SILO currently targets Windows and requires Codex Desktop plus Node.js 22.5 or newer.
