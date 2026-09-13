@@ -22551,7 +22551,7 @@ var require_compile = __commonJS({
       const schOrFunc = root.refs[ref];
       if (schOrFunc)
         return schOrFunc;
-      let _sch = resolve.call(this, root, ref);
+      let _sch = resolve2.call(this, root, ref);
       if (_sch === void 0) {
         const schema = (_a3 = root.localRefs) === null || _a3 === void 0 ? void 0 : _a3[ref];
         const { schemaId } = this.opts;
@@ -22578,7 +22578,7 @@ var require_compile = __commonJS({
     function sameSchemaEnv(s1, s2) {
       return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
     }
-    function resolve(root, ref) {
+    function resolve2(root, ref) {
       let sch;
       while (typeof (sch = this.refs[ref]) == "string")
         ref = sch;
@@ -23408,7 +23408,7 @@ var require_fast_uri = __commonJS({
       }
       return uri;
     }
-    function resolve(baseURI, relativeURI, options) {
+    function resolve2(baseURI, relativeURI, options) {
       const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
       const {
         parsed: baseParsed,
@@ -23441,49 +23441,49 @@ var require_fast_uri = __commonJS({
       schemelessOptions.skipEscape = true;
       return serialize(resolved, schemelessOptions);
     }
-    function resolveComponent(base, relative, options, skipNormalization) {
+    function resolveComponent(base, relative2, options, skipNormalization) {
       const target = {};
       if (!skipNormalization) {
         base = parse3(serialize(base, options), options);
-        relative = parse3(serialize(relative, options), options);
+        relative2 = parse3(serialize(relative2, options), options);
       }
       options = options || {};
-      if (!options.tolerant && relative.scheme) {
-        target.scheme = relative.scheme;
-        target.userinfo = relative.userinfo;
-        target.host = relative.host;
-        target.port = relative.port;
-        target.path = removeDotSegments(relative.path || "");
-        target.query = relative.query;
+      if (!options.tolerant && relative2.scheme) {
+        target.scheme = relative2.scheme;
+        target.userinfo = relative2.userinfo;
+        target.host = relative2.host;
+        target.port = relative2.port;
+        target.path = removeDotSegments(relative2.path || "");
+        target.query = relative2.query;
       } else {
-        if (relative.userinfo !== void 0 || relative.host !== void 0 || relative.port !== void 0) {
-          target.userinfo = relative.userinfo;
-          target.host = relative.host;
-          target.port = relative.port;
-          target.path = removeDotSegments(relative.path || "");
-          target.query = relative.query;
+        if (relative2.userinfo !== void 0 || relative2.host !== void 0 || relative2.port !== void 0) {
+          target.userinfo = relative2.userinfo;
+          target.host = relative2.host;
+          target.port = relative2.port;
+          target.path = removeDotSegments(relative2.path || "");
+          target.query = relative2.query;
         } else {
-          if (!relative.path) {
+          if (!relative2.path) {
             target.path = base.path;
-            if (relative.query !== void 0) {
-              target.query = relative.query;
+            if (relative2.query !== void 0) {
+              target.query = relative2.query;
             } else {
               target.query = base.query;
             }
           } else {
-            if (relative.path[0] === "/") {
-              target.path = removeDotSegments(relative.path);
+            if (relative2.path[0] === "/") {
+              target.path = removeDotSegments(relative2.path);
             } else {
               if ((base.userinfo !== void 0 || base.host !== void 0 || base.port !== void 0) && !base.path) {
-                target.path = "/" + relative.path;
+                target.path = "/" + relative2.path;
               } else if (!base.path) {
-                target.path = relative.path;
+                target.path = relative2.path;
               } else {
-                target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative.path;
+                target.path = base.path.slice(0, base.path.lastIndexOf("/") + 1) + relative2.path;
               }
               target.path = removeDotSegments(target.path);
             }
-            target.query = relative.query;
+            target.query = relative2.query;
           }
           target.userinfo = base.userinfo;
           target.host = base.host;
@@ -23491,7 +23491,7 @@ var require_fast_uri = __commonJS({
         }
         target.scheme = base.scheme;
       }
-      target.fragment = relative.fragment;
+      target.fragment = relative2.fragment;
       return target;
     }
     function equal(uriA, uriB, options) {
@@ -23776,7 +23776,7 @@ var require_fast_uri = __commonJS({
     var fastUri = {
       SCHEMES,
       normalize,
-      resolve,
+      resolve: resolve2,
       resolveComponent,
       equal,
       serialize,
@@ -34433,7 +34433,7 @@ var Protocol = class {
           return;
         }
         const pollInterval = task2.pollInterval ?? this._options?.defaultTaskPollInterval ?? 1e3;
-        await new Promise((resolve) => setTimeout(resolve, pollInterval));
+        await new Promise((resolve2) => setTimeout(resolve2, pollInterval));
         options?.signal?.throwIfAborted();
       }
     } catch (error61) {
@@ -34450,7 +34450,7 @@ var Protocol = class {
    */
   request(request, resultSchema, options) {
     const { relatedRequestId, resumptionToken, onresumptiontoken, task, relatedTask } = options ?? {};
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve2, reject) => {
       const earlyReject = (error61) => {
         reject(error61);
       };
@@ -34528,7 +34528,7 @@ var Protocol = class {
           if (!parseResult.success) {
             reject(parseResult.error);
           } else {
-            resolve(parseResult.data);
+            resolve2(parseResult.data);
           }
         } catch (error61) {
           reject(error61);
@@ -34789,12 +34789,12 @@ var Protocol = class {
       }
     } catch {
     }
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve2, reject) => {
       if (signal.aborted) {
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
         return;
       }
-      const timeoutId = setTimeout(resolve, interval);
+      const timeoutId = setTimeout(resolve2, interval);
       signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new McpError(ErrorCode.InvalidRequest, "Request cancelled"));
@@ -35885,7 +35885,7 @@ var McpServer = class {
     let task = createTaskResult.task;
     const pollInterval = task.pollInterval ?? 5e3;
     while (task.status !== "completed" && task.status !== "failed" && task.status !== "cancelled") {
-      await new Promise((resolve) => setTimeout(resolve, pollInterval));
+      await new Promise((resolve2) => setTimeout(resolve2, pollInterval));
       const updatedTask = await extra.taskStore.getTask(taskId);
       if (!updatedTask) {
         throw new McpError(ErrorCode.InternalError, `Task ${taskId} not found during polling`);
@@ -36549,12 +36549,12 @@ var StdioServerTransport = class {
     this.onclose?.();
   }
   send(message) {
-    return new Promise((resolve) => {
+    return new Promise((resolve2) => {
       const json2 = serializeMessage(message);
       if (this._stdout.write(json2)) {
-        resolve();
+        resolve2();
       } else {
-        this._stdout.once("drain", resolve);
+        this._stdout.once("drain", resolve2);
       }
     });
   }
@@ -36662,6 +36662,7 @@ var CodexAppServer = class extends EventEmitter {
     this.nextId = 1;
     this.startPromise = null;
     this.stderrTail = [];
+    this.serverRequests = /* @__PURE__ */ new Map();
     this.ready = false;
     this.closing = false;
   }
@@ -36757,13 +36758,26 @@ var CodexAppServer = class extends EventEmitter {
       return;
     }
     if (message.method && message.id !== void 0) {
-      this.#write({
-        id: message.id,
-        error: {
-          code: -32601,
-          message: "SILO inventory access is read-only and cannot answer interactive requests."
-        }
-      });
+      const supported = /* @__PURE__ */ new Set([
+        "item/commandExecution/requestApproval",
+        "item/fileChange/requestApproval",
+        "item/permissions/requestApproval"
+      ]);
+      if (!supported.has(message.method)) {
+        this.#write({
+          id: message.id,
+          error: { code: -32601, message: `SILO cannot handle app-server request ${message.method}.` }
+        });
+        return;
+      }
+      const request = {
+        id: String(message.id),
+        method: message.method,
+        params: message.params || {},
+        createdAt: Date.now()
+      };
+      this.serverRequests.set(request.id, request);
+      this.emit("approval", request);
       return;
     }
     if (message.method) this.emit("notification", message);
@@ -36774,13 +36788,13 @@ var CodexAppServer = class extends EventEmitter {
 `);
   }
   #requestRaw(method, params, timeoutMs = DEFAULT_TIMEOUT_MS) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve2, reject) => {
       const id = String(this.nextId++);
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error(`${method} timed out after ${timeoutMs}ms`));
       }, timeoutMs);
-      this.pending.set(id, { resolve, reject, timer, method });
+      this.pending.set(id, { resolve: resolve2, reject, timer, method });
       try {
         this.#write({ method, id, params });
       } catch (error61) {
@@ -36853,6 +36867,70 @@ var CodexAppServer = class extends EventEmitter {
     const result = await this.request("thread/read", { threadId, includeTurns: true });
     return result?.thread || null;
   }
+  async readThreadWithAllTurns(threadId) {
+    const result = await this.request("thread/read", { threadId, includeTurns: false });
+    const thread = result?.thread;
+    if (!thread) return null;
+    const pages = [];
+    let cursor = null;
+    let pageCount = 0;
+    do {
+      const page = await this.request("thread/turns/list", {
+        threadId,
+        cursor,
+        limit: 100,
+        sortDirection: "desc",
+        itemsView: "full"
+      });
+      pages.push(...page?.data || []);
+      cursor = page?.nextCursor || null;
+      pageCount += 1;
+    } while (cursor && pageCount < 20);
+    return { ...thread, turns: pages.reverse(), turnsTruncated: Boolean(cursor) };
+  }
+  async sendMessage(threadId, text, options = {}) {
+    await this.request("thread/resume", { threadId, excludeTurns: true });
+    const params = {
+      threadId,
+      input: [{ type: "text", text, text_elements: [] }],
+      turnTrigger: "silo_direct_message"
+    };
+    if (options.model) params.model = options.model;
+    if (options.effort) params.effort = options.effort;
+    if (options.fast) params.serviceTierForTurn = "fast";
+    try {
+      const result = await this.request("turn/start", params);
+      return { ...result, fastRequested: Boolean(options.fast), fastUsed: Boolean(options.fast) };
+    } catch (error61) {
+      if (!options.fast || !/(?:service.?tier|fast|priority).*(?:unsupported|unavailable|invalid|not available)|(?:unsupported|unavailable|invalid).*(?:service.?tier|fast|priority)/i.test(error61?.message || "")) {
+        throw error61;
+      }
+      delete params.serviceTierForTurn;
+      const result = await this.request("turn/start", params);
+      return { ...result, fastRequested: true, fastUsed: false, fastFallbackReason: error61.message };
+    }
+  }
+  listApprovals(threadId) {
+    return [...this.serverRequests.values()].filter((request) => !threadId || request.params?.threadId === threadId).sort((a, b) => a.createdAt - b.createdAt);
+  }
+  resolveApproval(id, decision = "decline", scope = "turn") {
+    const request = this.serverRequests.get(String(id));
+    if (!request) throw new Error(`Approval request is no longer pending: ${id}`);
+    let result;
+    if (request.method === "item/permissions/requestApproval") {
+      const requested = request.params?.permissions || {};
+      result = {
+        permissions: decision === "accept" ? Object.fromEntries(Object.entries(requested).filter(([, value]) => value != null)) : {},
+        scope: scope === "session" ? "session" : "turn"
+      };
+    } else {
+      const allowed = /* @__PURE__ */ new Set(["accept", "acceptForSession", "decline", "cancel"]);
+      result = { decision: allowed.has(decision) ? decision : "decline" };
+    }
+    this.#write({ id: request.id, result });
+    this.serverRequests.delete(request.id);
+    return { id: request.id, threadId: request.params?.threadId || null, decision, resolvedAt: Date.now() };
+  }
   async readRecentTurns(threadId, limit = 2) {
     const result = await this.request("thread/turns/list", {
       threadId,
@@ -36872,6 +36950,7 @@ var CodexAppServer = class extends EventEmitter {
       reject(new Error("Codex app-server client closed"));
     }
     this.pending.clear();
+    this.serverRequests.clear();
     this.process = null;
     child.stdin.end();
     const timer = setTimeout(() => child.kill(), 1e3);
@@ -36889,9 +36968,10 @@ import {
   readFileSync,
   readSync,
   readdirSync,
+  statSync,
   writeFileSync
 } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { homedir } from "node:os";
 var SCOPES = /* @__PURE__ */ new Set(["active", "archived", "all"]);
 var DESKTOP_ACTIVITY_WINDOW_MS = 10 * 60 * 1e3;
@@ -36945,6 +37025,75 @@ function safeTitle(thread) {
     "\u672A\u547D\u540D\u4EFB\u52A1",
     180
   );
+}
+function epochMs(value) {
+  const number4 = Number(value || 0);
+  return number4 && number4 < 1e10 ? number4 * 1e3 : number4;
+}
+function userMessageText(content) {
+  if (!Array.isArray(content)) return safeText(content, "", 12e3);
+  return content.filter((item) => item?.type === "text" && item.text).map((item) => String(item.text)).join("\n\n").trim().slice(0, 12e3);
+}
+function collectConversationFiles(thread) {
+  const files = /* @__PURE__ */ new Map();
+  const root = String(thread?.cwd || "");
+  for (const turn of thread?.turns || []) {
+    for (const item of turn?.items || []) {
+      if (item?.type !== "fileChange") continue;
+      for (const change of item.changes || []) {
+        const changedPath = String(change?.path || "");
+        const path = changedPath && root ? resolve(root, changedPath) : changedPath;
+        if (path) files.set(path.toLowerCase(), { path, source: "conversation" });
+      }
+    }
+  }
+  return files;
+}
+function recentWorkspaceFiles(root, existing, limit = 80) {
+  if (!root || !existsSync(root)) return [...existing.values()];
+  const skip = /* @__PURE__ */ new Set([".git", "node_modules", ".next", "dist", "build", ".venv", "venv", "__pycache__"]);
+  const candidates = [];
+  const stack = [{ path: root, depth: 0 }];
+  let visited = 0;
+  while (stack.length && visited < 900) {
+    const current = stack.pop();
+    let entries;
+    try {
+      entries = readdirSync(current.path, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (visited++ >= 900) break;
+      if (entry.name.startsWith(".") && entry.name !== ".env.example") continue;
+      const path = join(current.path, entry.name);
+      if (entry.isDirectory()) {
+        if (current.depth < 3 && !skip.has(entry.name)) stack.push({ path, depth: current.depth + 1 });
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      try {
+        const stat = statSync(path);
+        candidates.push({ path, name: entry.name, size: stat.size, modifiedAt: stat.mtimeMs, source: "workspace" });
+      } catch {
+      }
+    }
+  }
+  candidates.sort((a, b) => b.modifiedAt - a.modifiedAt);
+  for (const file2 of candidates) {
+    const key = file2.path.toLowerCase();
+    if (!existing.has(key)) existing.set(key, file2);
+    if (existing.size >= limit) break;
+  }
+  return [...existing.values()].slice(0, limit).map((file2) => {
+    if (file2.modifiedAt !== void 0) return file2;
+    try {
+      const stat = statSync(file2.path);
+      return { ...file2, name: basename(file2.path), size: stat.size, modifiedAt: stat.mtimeMs };
+    } catch {
+      return { ...file2, name: basename(file2.path), size: null, modifiedAt: null, missing: true };
+    }
+  });
 }
 function cleanConversationPreview(value) {
   let text = String(value || "");
@@ -37285,6 +37434,8 @@ var InventoryService = class {
       updatedAt: Number(thread.recencyAt || thread.updatedAt || 0) * 1e3,
       createdAt: Number(thread.createdAt || 0) * 1e3,
       branch: thread.gitInfo?.branch || null,
+      model: safeText(thread.model, "", 64) || null,
+      effort: safeText(thread.reasoningEffort || thread.reasoning_effort, "", 32) || null,
       lastTurnStatus
     };
   }
@@ -37361,6 +37512,8 @@ var InventoryService = class {
           updatedAt: Number(row.recency_at_ms || row.updated_at_ms || row.updated_at * 1e3 || 0),
           createdAt: Number(row.created_at_ms || row.created_at * 1e3 || 0),
           branch: row.git_branch || null,
+          model: safeText(row.model, "", 64) || null,
+          effort: safeText(row.reasoning_effort, "", 32) || null,
           lastTurnStatus: null
         };
       });
@@ -37401,6 +37554,110 @@ var InventoryService = class {
     } catch {
       return { user: task.preview || task.title, agent: "" };
     }
+  }
+  async readTaskDetails(id, options = {}) {
+    const task = this.tasks.get(id);
+    if (!task) throw new Error(`\u4EFB\u52A1\u4E0D\u5728\u6700\u8FD1\u626B\u63CF\u7ED3\u679C\u4E2D\uFF1A${id || "unknown"}`);
+    const thread = this.appServer.readThreadWithAllTurns ? await this.appServer.readThreadWithAllTurns(id) : await this.appServer.readThread(id);
+    if (!thread) throw new Error(`\u65E0\u6CD5\u8BFB\u53D6\u4EFB\u52A1\uFF1A${id}`);
+    const messages = [];
+    for (const turn of thread.turns || []) {
+      let offset = 0;
+      for (const item of turn.items || []) {
+        let role = null;
+        let text = "";
+        if (item.type === "userMessage") {
+          role = "user";
+          text = userMessageText(item.content);
+        } else if (item.type === "agentMessage" && item.text) {
+          role = "assistant";
+          text = String(item.text).trim().slice(0, 12e3);
+        }
+        if (!role || !text) continue;
+        messages.push({
+          id: item.id || `${turn.id || "turn"}-${offset}`,
+          turnId: turn.id || null,
+          role,
+          text,
+          phase: item.phase || null,
+          status: turn.status || null,
+          createdAt: epochMs(turn.startedAt) + offset
+        });
+        offset += 1;
+      }
+    }
+    const pageSize = Math.max(10, Math.min(80, Number(options.limit) || 40));
+    const end = Math.max(0, Math.min(messages.length, Number.isFinite(Number(options.before)) ? Number(options.before) : messages.length));
+    const start = Math.max(0, end - pageSize);
+    const page = messages.slice(start, end);
+    return {
+      id,
+      title: task.title,
+      cwd: task.cwd,
+      status: task.status,
+      canAcceptDirectInput: thread.canAcceptDirectInput !== false,
+      messages: page,
+      messageCount: messages.length,
+      messagesTruncated: start > 0,
+      nextBefore: start > 0 ? start : null,
+      historyTruncatedAtSource: Boolean(thread.turnsTruncated),
+      files: recentWorkspaceFiles(task.cwd, collectConversationFiles({ ...thread, cwd: task.cwd })),
+      readAt: Date.now()
+    };
+  }
+  async sendTaskPrompt(id, prompt, options = {}) {
+    const task = this.tasks.get(id);
+    if (!task) throw new Error(`\u4EFB\u52A1\u4E0D\u5728\u6700\u8FD1\u626B\u63CF\u7ED3\u679C\u4E2D\uFF1A${id || "unknown"}`);
+    let text = String(prompt || "").trim();
+    if (!text) throw new Error("\u63D0\u793A\u8BCD\u4E0D\u80FD\u4E3A\u7A7A");
+    if (text.length > 2e4) throw new Error("\u5355\u6761\u63D0\u793A\u8BCD\u6700\u591A 20000 \u4E2A\u5B57\u7B26");
+    if (options.burn && !/Burn 执行策略|Burn execution strategy/i.test(text)) {
+      text += options.locale === "en" ? "\n\n[Burn execution strategy]\nParallelize independent work, keep ownership boundaries explicit, verify each result, and continue until the requested outcome is complete." : "\n\n\u3010Burn \u6267\u884C\u7B56\u7565\u3011\n\u5E76\u884C\u63A8\u8FDB\u53EF\u72EC\u7ACB\u5B8C\u6210\u7684\u5DE5\u4F5C\uFF0C\u660E\u786E\u4EFB\u52A1\u8FB9\u754C\uFF0C\u9010\u9879\u9A8C\u8BC1\u7ED3\u679C\uFF0C\u5E76\u6301\u7EED\u6267\u884C\u76F4\u5230\u76EE\u6807\u771F\u6B63\u5B8C\u6210\u3002";
+    }
+    const result = await this.appServer.sendMessage(id, text, {
+      model: options.model && options.model !== "preserve" ? options.model : null,
+      effort: options.effort || null,
+      fast: Boolean(options.fast)
+    });
+    return {
+      id,
+      turnId: result?.turn?.id || null,
+      status: result?.turn?.status || "inProgress",
+      fastRequested: Boolean(result?.fastRequested),
+      fastUsed: Boolean(result?.fastUsed),
+      fastFallbackReason: result?.fastFallbackReason || null,
+      sentAt: Date.now()
+    };
+  }
+  readTaskFile(id, requestedPath) {
+    const task = this.tasks.get(id);
+    if (!task) throw new Error(`\u4EFB\u52A1\u4E0D\u5728\u6700\u8FD1\u626B\u63CF\u7ED3\u679C\u4E2D\uFF1A${id || "unknown"}`);
+    if (!task.cwd) throw new Error("\u4EFB\u52A1\u5DE5\u4F5C\u76EE\u5F55\u4E0D\u53EF\u7528");
+    const root = resolve(String(task.cwd));
+    if (!existsSync(root)) throw new Error("\u4EFB\u52A1\u5DE5\u4F5C\u76EE\u5F55\u4E0D\u53EF\u7528");
+    const candidate = resolve(root, String(requestedPath || ""));
+    const rel = relative(root, candidate);
+    if (!rel || rel.startsWith(`..${sep}`) || rel === ".." || rel.startsWith(sep)) {
+      throw new Error("\u53EA\u80FD\u8BFB\u53D6\u5F53\u524D\u4EFB\u52A1\u5DE5\u4F5C\u76EE\u5F55\u5185\u7684\u6587\u4EF6");
+    }
+    const stat = statSync(candidate);
+    if (!stat.isFile()) throw new Error("\u76EE\u6807\u4E0D\u662F\u6587\u4EF6");
+    const maxBytes = 512 * 1024;
+    const buffer = readFileSync(candidate);
+    if (buffer.subarray(0, Math.min(buffer.length, 8192)).includes(0)) {
+      throw new Error("\u4E8C\u8FDB\u5236\u6587\u4EF6\u6682\u4E0D\u652F\u6301\u5185\u5D4C\u9884\u89C8");
+    }
+    return {
+      id,
+      path: candidate,
+      relativePath: rel,
+      name: basename(candidate),
+      size: stat.size,
+      modifiedAt: stat.mtimeMs,
+      content: buffer.subarray(0, maxBytes).toString("utf8"),
+      truncated: buffer.length > maxBytes,
+      readAt: Date.now()
+    };
   }
   #loadNativeSnapshot() {
     if (!this.snapshotPath || !existsSync(this.snapshotPath)) return;
@@ -37490,7 +37747,7 @@ import {
   openSync as openSync2,
   readFileSync as readFileSync2,
   renameSync,
-  statSync,
+  statSync as statSync2,
   unlinkSync,
   writeFileSync as writeFileSync2
 } from "node:fs";
@@ -37980,7 +38237,7 @@ var NativeJobStore = class {
       } catch (error61) {
         if (error61.code !== "EEXIST") throw error61;
         try {
-          if (Date.now() - statSync(lockPath).mtimeMs > this.staleLockMs) unlinkSync(lockPath);
+          if (Date.now() - statSync2(lockPath).mtimeMs > this.staleLockMs) unlinkSync(lockPath);
         } catch (statError) {
           if (statError.code !== "ENOENT") throw statError;
         }
@@ -38200,7 +38457,8 @@ var PlanStore = class {
         mode: item.mode,
         prompt: item.prompt !== void 0 ? buildTaskPrompt(item.mode, additionalPrompt, item.prompt, Boolean(item.burn), locale) : contextualPrompt(task, item.mode, additionalPrompt, Boolean(item.burn), {}, locale),
         burn: Boolean(item.burn),
-        modelOverride: MODELS[itemModelKey].model ? { model: MODELS[itemModelKey].model, thinking: itemThinking } : null,
+        fast: Boolean(item.fast || item.burn),
+        modelOverride: MODELS[itemModelKey].model || item.fast || item.burn ? { model: MODELS[itemModelKey].model, thinking: itemThinking, serviceTier: item.fast || item.burn ? "fast" : null } : null,
         collisionRisk: Boolean(task.collisionRisk)
       };
     });
@@ -38523,6 +38781,119 @@ server.registerTool(
         structuredContent: result,
         content: [{ type: "text", text: `\u5F53\u524D\u6709 ${result.count} \u4E2A Codex \u4EFB\u52A1\u6B63\u5728\u8FDB\u884C\u3002` }]
       };
+    } catch (error61) {
+      return toolError(error61);
+    }
+  }
+);
+server.registerTool(
+  "read_task_details",
+  {
+    title: "Read Codex task conversation and files",
+    description: "Read the visible user/assistant conversation history and a bounded recent-file list for one task already present in the SILO inventory. This is read-only.",
+    inputSchema: {
+      id: external_exports.string().min(6).max(128),
+      before: external_exports.number().int().min(0).optional(),
+      limit: external_exports.number().int().min(10).max(80).default(40)
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    },
+    _meta: {
+      "openai/toolInvocation/invoking": "Loading task conversation\u2026",
+      "openai/toolInvocation/invoked": "Task conversation loaded."
+    }
+  },
+  async ({ id, before, limit }) => {
+    try {
+      const result = await inventory.readTaskDetails(id, { before, limit });
+      return {
+        structuredContent: result,
+        content: [{ type: "text", text: `\u5DF2\u8BFB\u53D6 ${result.messageCount} \u6761\u5BF9\u8BDD\u6D88\u606F\u548C ${result.files.length} \u4E2A\u76F8\u5173\u6587\u4EF6\u3002` }]
+      };
+    } catch (error61) {
+      return toolError(error61);
+    }
+  }
+);
+server.registerTool(
+  "read_task_file",
+  {
+    title: "Read a task workspace file",
+    description: "Read a bounded text preview for a file inside the selected task workspace.",
+    inputSchema: { id: external_exports.string().min(6).max(128), path: external_exports.string().min(1).max(2048) },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+  },
+  async ({ id, path }) => {
+    try {
+      const result = inventory.readTaskFile(id, path);
+      return { structuredContent: result, content: [{ type: "text", text: `\u5DF2\u8BFB\u53D6 ${result.relativePath}\u3002` }] };
+    } catch (error61) {
+      return toolError(error61);
+    }
+  }
+);
+server.registerTool(
+  "send_task_prompt",
+  {
+    title: "Send a prompt to a Codex task",
+    description: "Start or steer one existing Codex task with a user-confirmed direct prompt from SILO.",
+    inputSchema: {
+      id: external_exports.string().min(6).max(128),
+      prompt: external_exports.string().min(1).max(2e4),
+      model: external_exports.string().min(1).max(128).default("preserve"),
+      effort: external_exports.enum(["low", "medium", "high", "xhigh", "max", "ultra"]).optional(),
+      fast: external_exports.boolean().default(false),
+      burn: external_exports.boolean().default(false),
+      locale: external_exports.enum(["zh-CN", "en"]).default("zh-CN")
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    _meta: {
+      "openai/toolInvocation/invoking": "Sending message to task\u2026",
+      "openai/toolInvocation/invoked": "Message sent to task."
+    }
+  },
+  async (args) => {
+    try {
+      const result = await inventory.sendTaskPrompt(args.id, args.prompt, args);
+      return { structuredContent: result, content: [{ type: "text", text: "\u6D88\u606F\u5DF2\u53D1\u9001\u5230\u539F Codex \u4EFB\u52A1\u3002" }] };
+    } catch (error61) {
+      return toolError(error61);
+    }
+  }
+);
+server.registerTool(
+  "list_task_approvals",
+  {
+    title: "List pending task approvals",
+    description: "List approval requests raised by Codex tasks started directly from SILO.",
+    inputSchema: { id: external_exports.string().min(6).max(128).optional() },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
+  },
+  async ({ id }) => {
+    const approvals = appServer.listApprovals(id);
+    return { structuredContent: { approvals, count: approvals.length, readAt: Date.now() }, content: [] };
+  }
+);
+server.registerTool(
+  "resolve_task_approval",
+  {
+    title: "Resolve a task approval",
+    description: "Approve or decline one pending approval shown inside SILO.",
+    inputSchema: {
+      requestId: external_exports.string().min(1).max(128),
+      decision: external_exports.enum(["accept", "acceptForSession", "decline", "cancel"]),
+      scope: external_exports.enum(["turn", "session"]).default("turn")
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }
+  },
+  async ({ requestId, decision, scope }) => {
+    try {
+      const result = appServer.resolveApproval(requestId, decision, scope);
+      return { structuredContent: result, content: [{ type: "text", text: "\u5BA1\u6279\u5DF2\u5904\u7406\u3002" }] };
     } catch (error61) {
       return toolError(error61);
     }

@@ -7,9 +7,10 @@ import {
   readFileSync,
   readSync,
   readdirSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { homedir } from "node:os";
 
 const SCOPES = new Set(["active", "archived", "all"]);
@@ -72,6 +73,85 @@ function safeTitle(thread) {
     "未命名任务",
     180,
   );
+}
+
+function epochMs(value) {
+  const number = Number(value || 0);
+  return number && number < 10_000_000_000 ? number * 1000 : number;
+}
+
+function userMessageText(content) {
+  if (!Array.isArray(content)) return safeText(content, "", 12_000);
+  return content
+    .filter((item) => item?.type === "text" && item.text)
+    .map((item) => String(item.text))
+    .join("\n\n")
+    .trim()
+    .slice(0, 12_000);
+}
+
+function collectConversationFiles(thread) {
+  const files = new Map();
+  const root = String(thread?.cwd || "");
+  for (const turn of thread?.turns || []) {
+    for (const item of turn?.items || []) {
+      if (item?.type !== "fileChange") continue;
+      for (const change of item.changes || []) {
+        const changedPath = String(change?.path || "");
+        const path = changedPath && root ? resolve(root, changedPath) : changedPath;
+        if (path) files.set(path.toLowerCase(), { path, source: "conversation" });
+      }
+    }
+  }
+  return files;
+}
+
+function recentWorkspaceFiles(root, existing, limit = 80) {
+  if (!root || !existsSync(root)) return [...existing.values()];
+  const skip = new Set([".git", "node_modules", ".next", "dist", "build", ".venv", "venv", "__pycache__"]);
+  const candidates = [];
+  const stack = [{ path: root, depth: 0 }];
+  let visited = 0;
+  while (stack.length && visited < 900) {
+    const current = stack.pop();
+    let entries;
+    try {
+      entries = readdirSync(current.path, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (visited++ >= 900) break;
+      if (entry.name.startsWith(".") && entry.name !== ".env.example") continue;
+      const path = join(current.path, entry.name);
+      if (entry.isDirectory()) {
+        if (current.depth < 3 && !skip.has(entry.name)) stack.push({ path, depth: current.depth + 1 });
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      try {
+        const stat = statSync(path);
+        candidates.push({ path, name: entry.name, size: stat.size, modifiedAt: stat.mtimeMs, source: "workspace" });
+      } catch {
+        // A file can disappear during a read-only workspace scan.
+      }
+    }
+  }
+  candidates.sort((a, b) => b.modifiedAt - a.modifiedAt);
+  for (const file of candidates) {
+    const key = file.path.toLowerCase();
+    if (!existing.has(key)) existing.set(key, file);
+    if (existing.size >= limit) break;
+  }
+  return [...existing.values()].slice(0, limit).map((file) => {
+    if (file.modifiedAt !== undefined) return file;
+    try {
+      const stat = statSync(file.path);
+      return { ...file, name: basename(file.path), size: stat.size, modifiedAt: stat.mtimeMs };
+    } catch {
+      return { ...file, name: basename(file.path), size: null, modifiedAt: null, missing: true };
+    }
+  });
 }
 
 function cleanConversationPreview(value) {
@@ -476,6 +556,8 @@ export class InventoryService {
       updatedAt: Number(thread.recencyAt || thread.updatedAt || 0) * 1000,
       createdAt: Number(thread.createdAt || 0) * 1000,
       branch: thread.gitInfo?.branch || null,
+      model: safeText(thread.model, "", 64) || null,
+      effort: safeText(thread.reasoningEffort || thread.reasoning_effort, "", 32) || null,
       lastTurnStatus,
     };
   }
@@ -560,6 +642,8 @@ export class InventoryService {
           updatedAt: Number(row.recency_at_ms || row.updated_at_ms || row.updated_at * 1000 || 0),
           createdAt: Number(row.created_at_ms || row.created_at * 1000 || 0),
           branch: row.git_branch || null,
+          model: safeText(row.model, "", 64) || null,
+          effort: safeText(row.reasoning_effort, "", 32) || null,
           lastTurnStatus: null,
         };
       });
@@ -606,6 +690,117 @@ export class InventoryService {
     } catch {
       return { user: task.preview || task.title, agent: "" };
     }
+  }
+
+  async readTaskDetails(id, options = {}) {
+    const task = this.tasks.get(id);
+    if (!task) throw new Error(`任务不在最近扫描结果中：${id || "unknown"}`);
+    const thread = this.appServer.readThreadWithAllTurns
+      ? await this.appServer.readThreadWithAllTurns(id)
+      : await this.appServer.readThread(id);
+    if (!thread) throw new Error(`无法读取任务：${id}`);
+    const messages = [];
+    for (const turn of thread.turns || []) {
+      let offset = 0;
+      for (const item of turn.items || []) {
+        let role = null;
+        let text = "";
+        if (item.type === "userMessage") {
+          role = "user";
+          text = userMessageText(item.content);
+        } else if (item.type === "agentMessage" && item.text) {
+          role = "assistant";
+          text = String(item.text).trim().slice(0, 12_000);
+        }
+        if (!role || !text) continue;
+        messages.push({
+          id: item.id || `${turn.id || "turn"}-${offset}`,
+          turnId: turn.id || null,
+          role,
+          text,
+          phase: item.phase || null,
+          status: turn.status || null,
+          createdAt: epochMs(turn.startedAt) + offset,
+        });
+        offset += 1;
+      }
+    }
+    const pageSize = Math.max(10, Math.min(80, Number(options.limit) || 40));
+    const end = Math.max(0, Math.min(messages.length, Number.isFinite(Number(options.before)) ? Number(options.before) : messages.length));
+    const start = Math.max(0, end - pageSize);
+    const page = messages.slice(start, end);
+    return {
+      id,
+      title: task.title,
+      cwd: task.cwd,
+      status: task.status,
+      canAcceptDirectInput: thread.canAcceptDirectInput !== false,
+      messages: page,
+      messageCount: messages.length,
+      messagesTruncated: start > 0,
+      nextBefore: start > 0 ? start : null,
+      historyTruncatedAtSource: Boolean(thread.turnsTruncated),
+      files: recentWorkspaceFiles(task.cwd, collectConversationFiles({ ...thread, cwd: task.cwd })),
+      readAt: Date.now(),
+    };
+  }
+
+  async sendTaskPrompt(id, prompt, options = {}) {
+    const task = this.tasks.get(id);
+    if (!task) throw new Error(`任务不在最近扫描结果中：${id || "unknown"}`);
+    let text = String(prompt || "").trim();
+    if (!text) throw new Error("提示词不能为空");
+    if (text.length > 20_000) throw new Error("单条提示词最多 20000 个字符");
+    if (options.burn && !/Burn 执行策略|Burn execution strategy/i.test(text)) {
+      text += options.locale === "en"
+        ? "\n\n[Burn execution strategy]\nParallelize independent work, keep ownership boundaries explicit, verify each result, and continue until the requested outcome is complete."
+        : "\n\n【Burn 执行策略】\n并行推进可独立完成的工作，明确任务边界，逐项验证结果，并持续执行直到目标真正完成。";
+    }
+    const result = await this.appServer.sendMessage(id, text, {
+      model: options.model && options.model !== "preserve" ? options.model : null,
+      effort: options.effort || null,
+      fast: Boolean(options.fast),
+    });
+    return {
+      id,
+      turnId: result?.turn?.id || null,
+      status: result?.turn?.status || "inProgress",
+      fastRequested: Boolean(result?.fastRequested),
+      fastUsed: Boolean(result?.fastUsed),
+      fastFallbackReason: result?.fastFallbackReason || null,
+      sentAt: Date.now(),
+    };
+  }
+
+  readTaskFile(id, requestedPath) {
+    const task = this.tasks.get(id);
+    if (!task) throw new Error(`任务不在最近扫描结果中：${id || "unknown"}`);
+    if (!task.cwd) throw new Error("任务工作目录不可用");
+    const root = resolve(String(task.cwd));
+    if (!existsSync(root)) throw new Error("任务工作目录不可用");
+    const candidate = resolve(root, String(requestedPath || ""));
+    const rel = relative(root, candidate);
+    if (!rel || rel.startsWith(`..${sep}`) || rel === ".." || rel.startsWith(sep)) {
+      throw new Error("只能读取当前任务工作目录内的文件");
+    }
+    const stat = statSync(candidate);
+    if (!stat.isFile()) throw new Error("目标不是文件");
+    const maxBytes = 512 * 1024;
+    const buffer = readFileSync(candidate);
+    if (buffer.subarray(0, Math.min(buffer.length, 8192)).includes(0)) {
+      throw new Error("二进制文件暂不支持内嵌预览");
+    }
+    return {
+      id,
+      path: candidate,
+      relativePath: rel,
+      name: basename(candidate),
+      size: stat.size,
+      modifiedAt: stat.mtimeMs,
+      content: buffer.subarray(0, maxBytes).toString("utf8"),
+      truncated: buffer.length > maxBytes,
+      readAt: Date.now(),
+    };
   }
 
   #loadNativeSnapshot() {

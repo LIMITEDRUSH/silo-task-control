@@ -76,6 +76,28 @@ test("sends reviewed prompts through codex exec resume and tracks completion", a
   assert.equal(dispatcher.list()[0].id, completed.id);
 });
 
+test("passes the fast service tier to Codex when a target requests it", async () => {
+  const calls = [];
+  const dispatcher = new DesktopDispatcher({
+    codexBin: "codex-test",
+    journalPath: false,
+    spawnFn: createSpawn([{ code: 0 }], calls),
+  });
+  const started = dispatcher.launch(
+    plan([{
+      threadId: "thread-fast",
+      title: "Fast",
+      prompt: "Continue quickly",
+      cwd: process.cwd(),
+      modelOverride: { model: null, thinking: "high", serviceTier: "fast" },
+    }]),
+  );
+  await waitForJob(dispatcher, started.id);
+
+  assert.ok(calls[0].args.includes('service_tier="fast"'));
+  assert.ok(calls[0].args.includes('model_reasoning_effort="high"'));
+});
+
 test("shows an externally owned task as a safe launch failure", async () => {
   const calls = [];
   const dispatcher = new DesktopDispatcher({

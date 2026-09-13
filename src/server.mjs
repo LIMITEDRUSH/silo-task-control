@@ -233,6 +233,125 @@ server.registerTool(
 );
 
 server.registerTool(
+  "read_task_details",
+  {
+    title: "Read Codex task conversation and files",
+    description:
+      "Read the visible user/assistant conversation history and a bounded recent-file list for one task already present in the SILO inventory. This is read-only.",
+    inputSchema: {
+      id: z.string().min(6).max(128),
+      before: z.number().int().min(0).optional(),
+      limit: z.number().int().min(10).max(80).default(40),
+    },
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+    _meta: {
+      "openai/toolInvocation/invoking": "Loading task conversation…",
+      "openai/toolInvocation/invoked": "Task conversation loaded.",
+    },
+  },
+  async ({ id, before, limit }) => {
+    try {
+      const result = await inventory.readTaskDetails(id, { before, limit });
+      return {
+        structuredContent: result,
+        content: [{ type: "text", text: `已读取 ${result.messageCount} 条对话消息和 ${result.files.length} 个相关文件。` }],
+      };
+    } catch (error) {
+      return toolError(error);
+    }
+  },
+);
+
+server.registerTool(
+  "read_task_file",
+  {
+    title: "Read a task workspace file",
+    description: "Read a bounded text preview for a file inside the selected task workspace.",
+    inputSchema: { id: z.string().min(6).max(128), path: z.string().min(1).max(2048) },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  },
+  async ({ id, path }) => {
+    try {
+      const result = inventory.readTaskFile(id, path);
+      return { structuredContent: result, content: [{ type: "text", text: `已读取 ${result.relativePath}。` }] };
+    } catch (error) {
+      return toolError(error);
+    }
+  },
+);
+
+server.registerTool(
+  "send_task_prompt",
+  {
+    title: "Send a prompt to a Codex task",
+    description: "Start or steer one existing Codex task with a user-confirmed direct prompt from SILO.",
+    inputSchema: {
+      id: z.string().min(6).max(128),
+      prompt: z.string().min(1).max(20_000),
+      model: z.string().min(1).max(128).default("preserve"),
+      effort: z.enum(["low", "medium", "high", "xhigh", "max", "ultra"]).optional(),
+      fast: z.boolean().default(false),
+      burn: z.boolean().default(false),
+      locale: z.enum(["zh-CN", "en"]).default("zh-CN"),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+    _meta: {
+      "openai/toolInvocation/invoking": "Sending message to task…",
+      "openai/toolInvocation/invoked": "Message sent to task.",
+    },
+  },
+  async (args) => {
+    try {
+      const result = await inventory.sendTaskPrompt(args.id, args.prompt, args);
+      return { structuredContent: result, content: [{ type: "text", text: "消息已发送到原 Codex 任务。" }] };
+    } catch (error) {
+      return toolError(error);
+    }
+  },
+);
+
+server.registerTool(
+  "list_task_approvals",
+  {
+    title: "List pending task approvals",
+    description: "List approval requests raised by Codex tasks started directly from SILO.",
+    inputSchema: { id: z.string().min(6).max(128).optional() },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  },
+  async ({ id }) => {
+    const approvals = appServer.listApprovals(id);
+    return { structuredContent: { approvals, count: approvals.length, readAt: Date.now() }, content: [] };
+  },
+);
+
+server.registerTool(
+  "resolve_task_approval",
+  {
+    title: "Resolve a task approval",
+    description: "Approve or decline one pending approval shown inside SILO.",
+    inputSchema: {
+      requestId: z.string().min(1).max(128),
+      decision: z.enum(["accept", "acceptForSession", "decline", "cancel"]),
+      scope: z.enum(["turn", "session"]).default("turn"),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+  },
+  async ({ requestId, decision, scope }) => {
+    try {
+      const result = appServer.resolveApproval(requestId, decision, scope);
+      return { structuredContent: result, content: [{ type: "text", text: "审批已处理。" }] };
+    } catch (error) {
+      return toolError(error);
+    }
+  },
+);
+
+server.registerTool(
   "recommend_tasks",
   {
     title: "Recommend Codex tasks",

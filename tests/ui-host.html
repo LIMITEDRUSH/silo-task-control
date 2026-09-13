@@ -27,6 +27,7 @@
     var hostParams = new URLSearchParams(location.search);
     var requestedWidth = Number(hostParams.get("width"));
     var requestedHeight = Number(hostParams.get("height"));
+    var hostLocale = hostParams.get("hostLocale") || "zh-CN";
     if (hostParams.get("clean") === "1") {
       document.body.classList.add("clean");
     }
@@ -61,7 +62,9 @@
         status: row[4], runnable: row[5],
         collisionRisk: row[6], blockedReason: row[5] ? null : "当前任务不可调度",
         statusEvidence: ["active", "idle", "waiting_input"].includes(row[4]) ? "codex_app_live" : "inventory_process",
-        archived: row[2] === "Archive", workflowState: row[7], updatedAt: now - index * 240000, createdAt: now - (index + 4) * 86400000, preview: ""
+        archived: row[2] === "Archive", workflowState: row[7], updatedAt: now - index * 240000, createdAt: now - (index + 4) * 86400000, preview: "",
+        model: ["gpt-5.6-sol","gpt-6-astra","gpt-5.6-terra","gpt-5.6-luna","gpt-5.5"][index % 5],
+        effort: ["high","xhigh","medium","low","high"][index % 5]
       };
     });
     var inventory = {
@@ -82,6 +85,7 @@
       if (legacyInit === "timeout") {
         frame.contentWindow.openai = {
           theme: "light",
+          locale: hostLocale,
           callTool: function (name) {
             if (name === "scan_tasks") return Promise.resolve({ structuredContent: inventory });
             if (name === "scan_running_tasks") return Promise.resolve({ structuredContent: { source: "app-server-live", tasks: inventory.tasks.filter(function (task) { return ["active", "waiting_approval", "waiting_input"].includes(task.status); }) } });
@@ -108,7 +112,7 @@
           protocolVersion: "2026-01-26",
           hostInfo: { name: "silo-ui-mock-host", version: "0.1.0" },
           hostCapabilities: { serverTools: {}, message: { text: {} } },
-          hostContext: { theme: "light", displayMode: "inline" }
+          hostContext: { theme: "light", displayMode: "inline", locale: hostLocale }
         };
       } else if (message.method === "tools/call" && message.params.name === "scan_tasks") {
         document.getElementById("dispatch").textContent =
@@ -123,6 +127,34 @@
             tasks: inventory.tasks.filter(function (task) { return task.status === "active"; })
           }
         };
+      } else if (message.method === "tools/call" && message.params.name === "read_task_details") {
+        result = {
+          structuredContent: {
+            id: message.params.arguments.id,
+            title: "完善 MemoryRush 实验控制器",
+            cwd: "C:\\Users\\Lenovo\\Documents\\ChatGPT\\MemoryRush",
+            status: "idle", canAcceptDirectInput: true, messageCount: 4,
+            messagesTruncated: false, nextBefore: null, readAt: Date.now(),
+            messages: [
+              { id: "m1", role: "user", text: "请完善实验控制器，并验证关键流程。", createdAt: now - 420000 },
+              { id: "m2", role: "assistant", text: "我会先检查现有实现，再补齐生命周期管理和状态持久化。", createdAt: now - 410000 },
+              { id: "m3", role: "user", text: "同时确保不同大小窗口没有截断。", createdAt: now - 180000 },
+              { id: "m4", role: "assistant", text: "已完成布局检查。下一步会覆盖窄屏、矮窗口与文件预览状态。", createdAt: now - 170000 }
+            ],
+            files: [
+              { path: "C:\\Users\\Lenovo\\Documents\\ChatGPT\\MemoryRush\\src\\controller.mjs", name: "controller.mjs", source: "conversation", size: 4820, modifiedAt: now - 100000 },
+              { path: "C:\\Users\\Lenovo\\Documents\\ChatGPT\\MemoryRush\\README.md", name: "README.md", source: "workspace", size: 1930, modifiedAt: now - 240000 }
+            ]
+          }
+        };
+      } else if (message.method === "tools/call" && message.params.name === "read_task_file") {
+        result = { structuredContent: { name: "controller.mjs", relativePath: "src\\controller.mjs", size: 4820, modifiedAt: Date.now(), content: "export class ExperimentController {\n  async start() {\n    return this.lifecycle.begin();\n  }\n}\n", truncated: false } };
+      } else if (message.method === "tools/call" && message.params.name === "send_task_prompt") {
+        result = { structuredContent: { id: message.params.arguments.id, turnId: "turn-direct", status: "inProgress", fastRequested: Boolean(message.params.arguments.fast), fastUsed: Boolean(message.params.arguments.fast), sentAt: Date.now() } };
+      } else if (message.method === "tools/call" && message.params.name === "list_task_approvals") {
+        result = { structuredContent: { approvals: [], count: 0, readAt: Date.now() } };
+      } else if (message.method === "tools/call" && message.params.name === "resolve_task_approval") {
+        result = { structuredContent: { id: message.params.arguments.requestId, decision: message.params.arguments.decision, resolvedAt: Date.now() } };
       } else if (message.method === "tools/call" && message.params.name === "recommend_tasks") {
         result = {
           structuredContent: {

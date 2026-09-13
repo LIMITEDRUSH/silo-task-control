@@ -13,7 +13,7 @@ const variants = [
     locale: "zh-CN",
     displayName: "SILO 中文",
     shortDescription: "用一个轻量面板管理 Codex 任务。",
-    longDescription: "SILO 中文版用于扫描、筛选、批量继续或优化 Codex 任务，并查看当前运行任务与历史批次。",
+    longDescription: "SILO 会自动跟随本地 Codex 的语言，用于扫描、筛选、批量继续或优化任务，并查看当前运行任务与历史批次。",
     defaultPrompt: [
       "打开 SILO 控制面板，扫描我现在的 Codex 任务。",
       "列出当前运行中的 Codex 任务。",
@@ -25,7 +25,7 @@ const variants = [
     locale: "en",
     displayName: "SILO English",
     shortDescription: "Manage Codex tasks from one lightweight panel.",
-    longDescription: "SILO English scans, filters, batch-continues or optimizes Codex tasks, and keeps current activity and batch history visible.",
+    longDescription: "SILO follows the local Codex language automatically, scans and filters tasks, and batch-continues or optimizes reviewed work.",
     defaultPrompt: [
       "Open the SILO control panel and scan my current Codex tasks.",
       "Show every Codex task that is currently running.",

@@ -4,7 +4,7 @@
 
 SILO 是一个简约、轻量的 Codex 控制面板，用于跨项目扫描现有任务、逐项检查将要发送的继续或优化提示词，并通过 Codex 原生任务工具启动用户确认过的批次。
 
-当前版本：**v0.4.1**（`0.4.1+codex.20260913`）
+当前版本：**v0.5.7**（`0.5.7+codex.20260913`）
 
 ## 安装
 
@@ -13,7 +13,7 @@ SILO 是一个简约、轻量的 Codex 控制面板，用于跨项目扫描现�
 ```powershell
 codex plugin marketplace add LIMITEDRUSH/silo-task-control
 codex plugin add silo-cn@silo-plugins
-# 或安装固定英文版：
+# 原英文包名也继续支持：
 codex plugin add silo-en@silo-plugins
 ```
 
@@ -23,7 +23,7 @@ codex plugin add silo-en@silo-plugins
 $silo-task-control 打开控制面板，扫描我现在的任务。
 ```
 
-安装时二选一：`silo-cn` 的界面和默认任务提示词固定为简体中文，`silo-en` 固定为英文。面板内不再提供语言开关，避免同一安装在使用中意外混用语言。
+两个包名现在采用相同的自动本地化逻辑。SILO 会优先读取本地 Codex 的语言，再回退到浏览器/系统语言；界面以及“继续/优化”生成的提示词会保持同一种语言，面板内无需语言开关。`silo-cn` 和 `silo-en` 继续保留，以兼容已有安装和升级。
 
 后续更新：
 
@@ -37,6 +37,7 @@ SILO 目前面向 Windows，需要 Codex Desktop 和 Node.js 22.5 或更高版�
 ## 主要能力
 
 - 快速读取本地任务，并结合 Codex 原生状态同步与 SQLite 后备索引。
+- 自动识别本地 Codex 语言，并在简体中文和英文界面之间同步切换。
 - 简洁的 **全部 / 待处理 / 已完成 / 智能选择** 工作流、全局搜索和项目分组。
 - 逐任务检查完整提示词，支持继续/优化、独立 Burn 策略、模型、推理强度及显式启动确认。
 - 使用持久化原生 job、原子 claim 和进度恢复构建实时运行栏；面板或服务重启后仍可恢复状态。

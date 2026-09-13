@@ -61,6 +61,17 @@ async function callTool(name, args = {}, context = {}) {
       const value = await inventory.scanRunning();
       return result(value, `当前有 ${value.count} 个任务正在进行。`);
     }
+    if (name === "read_task_details") {
+      const value = await inventory.readTaskDetails(args.id, args);
+      return result(value, `已读取 ${value.messageCount} 条对话消息和 ${value.files.length} 个相关文件。`);
+    }
+    if (name === "read_task_file") return result(inventory.readTaskFile(args.id, args.path), "文件预览已读取。");
+    if (name === "send_task_prompt") return result(await inventory.sendTaskPrompt(args.id, args.prompt, args), "消息已发送到原任务。");
+    if (name === "list_task_approvals") {
+      const approvals = appServer.listApprovals(args.id);
+      return result({ approvals, count: approvals.length, readAt: Date.now() });
+    }
+    if (name === "resolve_task_approval") return result(appServer.resolveApproval(args.requestId, args.decision, args.scope), "审批已处理。");
     if (name === "recommend_tasks") {
       const value = await inventory.recommendTasks(args);
       return result(value, `建议选择 ${value.selectedCount} 个任务。`);

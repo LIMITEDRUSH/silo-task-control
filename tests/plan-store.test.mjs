@@ -221,8 +221,13 @@ test("applies and validates per-task model and effort overrides", () => {
     confirmed: true,
   });
   const target = store.get(prepared.planId).targets[0];
-  assert.deepEqual(target.modelOverride, { model: "gpt-5.6-luna", thinking: "max" });
+  assert.deepEqual(target.modelOverride, {
+    model: "gpt-5.6-luna",
+    thinking: "max",
+    serviceTier: "fast",
+  });
   assert.equal(target.burn, true);
+  assert.equal(target.fast, true);
   assert.match(target.prompt, /Burn 执行策略｜已开启/);
 
   assert.throws(

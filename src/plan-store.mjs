@@ -200,8 +200,9 @@ export class PlanStore {
           ? buildTaskPrompt(item.mode, additionalPrompt, item.prompt, Boolean(item.burn), locale)
           : contextualPrompt(task, item.mode, additionalPrompt, Boolean(item.burn), {}, locale),
         burn: Boolean(item.burn),
-        modelOverride: MODELS[itemModelKey].model
-          ? { model: MODELS[itemModelKey].model, thinking: itemThinking }
+        fast: Boolean(item.fast || item.burn),
+        modelOverride: MODELS[itemModelKey].model || item.fast || item.burn
+          ? { model: MODELS[itemModelKey].model, thinking: itemThinking, serviceTier: item.fast || item.burn ? "fast" : null }
           : null,
         collisionRisk: Boolean(task.collisionRisk),
       };

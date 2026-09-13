@@ -19,6 +19,8 @@ class MockAppServer extends EventEmitter {
           cwd: process.cwd(),
           archived: false,
           status: { type: "idle" },
+          model: "gpt-5.6-sol",
+          reasoningEffort: "high",
           recencyAt: Math.floor(Date.now() / 1000),
         },
       ],
@@ -39,8 +41,51 @@ test("reports inventory truncation without hiding scanned tasks", async () => {
   assert.equal(result.tasks[0].id, "thread-inventory-test");
   assert.equal(result.tasks[0].folderPath, process.cwd());
   assert.ok(result.tasks[0].folderName);
+  assert.equal(result.tasks[0].model, "gpt-5.6-sol");
+  assert.equal(result.tasks[0].effort, "high");
   assert.equal(result.inventoryTruncated, true);
   assert.match(result.warning, /2000/);
+});
+
+test("reads a task conversation and sends Burn with fast mode", async () => {
+  class ConversationAppServer extends MockAppServer {
+    async readThreadWithAllTurns() {
+      return {
+        cwd: process.cwd(),
+        canAcceptDirectInput: true,
+        turns: [{
+          id: "turn-one",
+          status: "completed",
+          startedAt: Math.floor(Date.now() / 1000),
+          items: [
+            { id: "user-one", type: "userMessage", content: [{ type: "text", text: "Please continue" }] },
+            { id: "agent-one", type: "agentMessage", text: "Ready." },
+          ],
+        }],
+      };
+    }
+
+    async sendMessage(id, text, options) {
+      this.sent = { id, text, options };
+      return { turn: { id: "turn-two", status: "inProgress" }, fastRequested: true, fastUsed: true };
+    }
+  }
+
+  const appServer = new ConversationAppServer();
+  const inventory = new InventoryService(appServer, { snapshotPath: false });
+  await inventory.scan({ scope: "active", liveThreads: [] });
+  const detail = await inventory.readTaskDetails("thread-inventory-test");
+  assert.deepEqual(detail.messages.map((message) => message.role), ["user", "assistant"]);
+  assert.equal(detail.canAcceptDirectInput, true);
+
+  const sent = await inventory.sendTaskPrompt("thread-inventory-test", "Finish the work", {
+    fast: true,
+    burn: true,
+    locale: "en",
+  });
+  assert.match(appServer.sent.text, /Burn execution strategy/);
+  assert.equal(appServer.sent.options.fast, true);
+  assert.equal(sent.fastUsed, true);
 });
 
 test("recognizes a not-loaded thread whose latest turn is still in progress", async () => {

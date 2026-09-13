@@ -4,7 +4,7 @@
 
 SILO is a lightweight Codex control panel for scanning existing tasks across projects, reviewing the exact Continue or Optimize prompt for each task, and dispatching a confirmed batch through Codex's native task tools.
 
-Current release: **v0.4.1** (`0.4.1+codex.20260913`)
+Current release: **v0.5.7** (`0.5.7+codex.20260913`)
 
 ## Install
 
@@ -13,7 +13,7 @@ Add the GitHub repository as a Codex marketplace, then install SILO:
 ```powershell
 codex plugin marketplace add LIMITEDRUSH/silo-task-control
 codex plugin add silo-en@silo-plugins
-# Or install the fixed Chinese edition:
+# Existing Chinese package name is also supported:
 codex plugin add silo-cn@silo-plugins
 ```
 
@@ -23,7 +23,7 @@ Restart Codex after the first installation. Open **SILO** from the sidebar or st
 $silo-task-control Open the control panel and scan my current tasks.
 ```
 
-Choose exactly one edition during installation: `silo-en` fixes both the panel and generated prompts to English; `silo-cn` fixes both to Simplified Chinese. There is no in-panel language switch, so the interface cannot drift between languages.
+Both package names now use the same automatic localization behavior. SILO reads the host Codex locale first and falls back to the browser/system locale; the panel and generated Continue/Optimize prompts stay in sync without an in-panel language switch. The `silo-cn` and `silo-en` names remain available for upgrade compatibility.
 
 Update later with:
 
@@ -37,6 +37,7 @@ SILO currently targets Windows and requires Codex Desktop plus Node.js 22.5 or n
 ## Highlights
 
 - Fast local task inventory with Codex-native running-state synchronization and a SQLite fallback.
+- Automatic Simplified Chinese/English localization that follows the local Codex language.
 - Minimal **All / To do / Completed / Smart select** workflow with global search and project grouping.
 - Exact per-task prompt review, Continue/Optimize mode, independent Burn strategy, model and reasoning controls, and explicit launch confirmation.
 - A live activity rail backed by durable native jobs, atomic target claims, and progress restoration after the panel or server restarts.

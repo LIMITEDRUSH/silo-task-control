@@ -14,6 +14,7 @@ export class CodexAppServer extends EventEmitter {
     this.nextId = 1;
     this.startPromise = null;
     this.stderrTail = [];
+    this.serverRequests = new Map();
     this.ready = false;
     this.closing = false;
   }
@@ -121,13 +122,26 @@ export class CodexAppServer extends EventEmitter {
     }
 
     if (message.method && message.id !== undefined) {
-      this.#write({
-        id: message.id,
-        error: {
-          code: -32601,
-          message: "SILO inventory access is read-only and cannot answer interactive requests.",
-        },
-      });
+      const supported = new Set([
+        "item/commandExecution/requestApproval",
+        "item/fileChange/requestApproval",
+        "item/permissions/requestApproval",
+      ]);
+      if (!supported.has(message.method)) {
+        this.#write({
+          id: message.id,
+          error: { code: -32601, message: `SILO cannot handle app-server request ${message.method}.` },
+        });
+        return;
+      }
+      const request = {
+        id: String(message.id),
+        method: message.method,
+        params: message.params || {},
+        createdAt: Date.now(),
+      };
+      this.serverRequests.set(request.id, request);
+      this.emit("approval", request);
       return;
     }
 
@@ -226,6 +240,78 @@ export class CodexAppServer extends EventEmitter {
     return result?.thread || null;
   }
 
+  async readThreadWithAllTurns(threadId) {
+    const result = await this.request("thread/read", { threadId, includeTurns: false });
+    const thread = result?.thread;
+    if (!thread) return null;
+    const pages = [];
+    let cursor = null;
+    let pageCount = 0;
+    do {
+      const page = await this.request("thread/turns/list", {
+        threadId,
+        cursor,
+        limit: 100,
+        sortDirection: "desc",
+        itemsView: "full",
+      });
+      pages.push(...(page?.data || []));
+      cursor = page?.nextCursor || null;
+      pageCount += 1;
+    } while (cursor && pageCount < 20);
+    return { ...thread, turns: pages.reverse(), turnsTruncated: Boolean(cursor) };
+  }
+
+  async sendMessage(threadId, text, options = {}) {
+    await this.request("thread/resume", { threadId, excludeTurns: true });
+    const params = {
+      threadId,
+      input: [{ type: "text", text, text_elements: [] }],
+      turnTrigger: "silo_direct_message",
+    };
+    if (options.model) params.model = options.model;
+    if (options.effort) params.effort = options.effort;
+    if (options.fast) params.serviceTierForTurn = "fast";
+    try {
+      const result = await this.request("turn/start", params);
+      return { ...result, fastRequested: Boolean(options.fast), fastUsed: Boolean(options.fast) };
+    } catch (error) {
+      if (!options.fast || !/(?:service.?tier|fast|priority).*(?:unsupported|unavailable|invalid|not available)|(?:unsupported|unavailable|invalid).*(?:service.?tier|fast|priority)/i.test(error?.message || "")) {
+        throw error;
+      }
+      delete params.serviceTierForTurn;
+      const result = await this.request("turn/start", params);
+      return { ...result, fastRequested: true, fastUsed: false, fastFallbackReason: error.message };
+    }
+  }
+
+  listApprovals(threadId) {
+    return [...this.serverRequests.values()]
+      .filter((request) => !threadId || request.params?.threadId === threadId)
+      .sort((a, b) => a.createdAt - b.createdAt);
+  }
+
+  resolveApproval(id, decision = "decline", scope = "turn") {
+    const request = this.serverRequests.get(String(id));
+    if (!request) throw new Error(`Approval request is no longer pending: ${id}`);
+    let result;
+    if (request.method === "item/permissions/requestApproval") {
+      const requested = request.params?.permissions || {};
+      result = {
+        permissions: decision === "accept"
+          ? Object.fromEntries(Object.entries(requested).filter(([, value]) => value != null))
+          : {},
+        scope: scope === "session" ? "session" : "turn",
+      };
+    } else {
+      const allowed = new Set(["accept", "acceptForSession", "decline", "cancel"]);
+      result = { decision: allowed.has(decision) ? decision : "decline" };
+    }
+    this.#write({ id: request.id, result });
+    this.serverRequests.delete(request.id);
+    return { id: request.id, threadId: request.params?.threadId || null, decision, resolvedAt: Date.now() };
+  }
+
   async readRecentTurns(threadId, limit = 2) {
     const result = await this.request("thread/turns/list", {
       threadId,
@@ -246,6 +332,7 @@ export class CodexAppServer extends EventEmitter {
       reject(new Error("Codex app-server client closed"));
     }
     this.pending.clear();
+    this.serverRequests.clear();
     this.process = null;
     child.stdin.end();
     const timer = setTimeout(() => child.kill(), 1_000);

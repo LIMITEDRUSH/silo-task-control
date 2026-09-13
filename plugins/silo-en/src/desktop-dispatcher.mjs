@@ -282,6 +282,9 @@ export class DesktopDispatcher {
     if (modelOverride?.thinking) {
       args.push("-c", `model_reasoning_effort="${modelOverride.thinking}"`);
     }
+    if (modelOverride?.serviceTier) {
+      args.push("-c", `service_tier="${modelOverride.serviceTier}"`);
+    }
     args.push(target.threadId, "-");
 
     return new Promise((resolve) => {
