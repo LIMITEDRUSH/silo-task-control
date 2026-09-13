@@ -29,6 +29,7 @@ for (const id of [
   "stopAll",
   "prepareTab",
   "activityTab",
+  "activityLiveDot",
   "activityList",
   "mobileActivity",
   "mobileActivitySummary",
@@ -50,6 +51,19 @@ assert.doesNotMatch(html, /id=["']projectCount["']/);
 assert.doesNotMatch(html, /id=["']runnableCount["']/);
 assert.doesNotMatch(html, /id=["']confirmed["']/);
 assert.match(html, /role=["']tablist["']/);
+assert.match(
+  html,
+  /id=["']prepareTab["'].*id=["']filesTab["'].*id=["']historyTab["'].*id=["']activityTab["']/s,
+  "detail tabs must end with Running",
+);
+assert.match(html, /id=["']activityTab["'][^>]*>运行中.*id=["']activityLiveDot["']/s);
+assert.match(html, /\.rail-tabs>button:not\(\.close-inspector\):hover:not\(\.active\)/);
+assert.match(html, /@keyframes livePulse/);
+const headerActions = html.match(/<div class=["']header-actions["']>([\s\S]*?)<\/div>\s*<\/header>/)?.[1] || "";
+assert.doesNotMatch(headerActions, /id=["']languageSwitch["']/);
+assert.match(html, /<details class=["']rail-settings["']>[\s\S]*id=["']languageSwitch["']/);
+assert.match(html, /\.rail-settings\{display:block\}/, "settings must remain available without a selected task");
+assert.match(html, /\.advanced-settings\{display:none\}/, "avoid a duplicate task-only settings entry");
 assert.match(html, /role=["']progressbar["']/);
 assert.match(html, /role=["']progressbar["'][^>]*aria-label=["']批次完成进度["']/);
 assert.match(html, /bootstrapThreads=Array\.from\(state\.liveThreads\.values\(\)\)/);
@@ -76,6 +90,11 @@ assert.match(html, /sent:["']消息已显示在 Codex["']/);
 assert.match(html, /name:["']open_external_panel["']/);
 assert.match(html, /name:["']scan_running_tasks["']/);
 assert.match(html, /state\.runningTasks=new Map/);
+assert.match(html, /function observedTargets\(job\)[\s\S]*state\.jobs\.forEach/);
+assert.match(html, /function manageActivityTarget\(target\)/);
+assert.match(html, /row\.addEventListener\(["']click["'].*manageActivityTarget\(target\)/s);
+assert.match(html, /els\.activityLiveDot\.hidden=!runningIds\.size/);
+assert.match(html, /p\.liveThreads\|\|\[\][\s\S]*state\.runningTasks=new Map/);
 assert.match(html, /Codex 当前正在进行/);
 assert.match(html, /setInterval\(function\(\)\{void pollRunningTasks\(\)\},10000\)/);
 assert.match(html, /conversationVisibleAt/);

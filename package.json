@@ -1,6 +1,6 @@
 {
   "name": "silo-task-control",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "type": "module",
   "description": "Native Codex task inventory and batch-dispatch control panel.",

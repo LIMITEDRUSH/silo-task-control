@@ -4,7 +4,7 @@
 
 SILO is a lightweight Codex control panel for scanning existing tasks across projects, reviewing the exact Continue or Optimize prompt for each task, and dispatching a confirmed batch through Codex's native task tools.
 
-Current release: **v0.3.0** (`0.3.0+codex.20260913`)
+Current release: **v0.3.1** (`0.3.1+codex.20260913`)
 
 ## Install
 
