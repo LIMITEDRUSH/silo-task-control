@@ -46,15 +46,15 @@
     var quotaPlan = hostParams.get("plan") === "plus" ? "plus" : "pro";
     var legacyInit = new URLSearchParams(location.search).get("legacyInit");
     var tasks = [
-      ["thread-a","完善 MemoryRush 实验控制器","MemoryRush","C:\\Users\\Lenovo\\Documents\\ChatGPT\\MemoryRush","idle",true,false,"unfinished"],
-      ["thread-b","重新审计 R14-C14 实验","MemoryRush","C:\\Users\\Lenovo\\Documents\\ChatGPT\\MemoryRush","failed",true,false,"unfinished"],
-      ["thread-c","（未命名任务）","Master","C:\\Users\\Lenovo\\Documents\\Master","interrupted",true,false,"unfinished"],
-      ["thread-d","数据清洗与分析脚本","lab","C:\\Users\\Lenovo\\Documents\\Codex\\lab","active",false,false,"running"],
-      ["thread-e","整理实验归档","Archive","C:\\Users\\Lenovo\\Documents\\Archive","idle",true,false,"completed"],
-      ["thread-f","构建直播掉宝监控","Archive","C:\\Users\\Lenovo\\Documents\\Archive","not_loaded",true,true,"unfinished"],
-      ["thread-g","更新个人主页研究页面","Archive","C:\\Users\\Lenovo\\Documents\\Archive","not_loaded",true,true,"completed"],
-      ["thread-h","课程选择与毕业要求核对","Archive","C:\\Users\\Lenovo\\Documents\\Archive","waiting_input",false,false,"completed"],
-      ["thread-i","已交付的个人主页","Archive","C:\\Users\\Lenovo\\Documents\\Archive","idle",false,false,"completed"]
+      ["thread-a","完成 Atlas 发布检查清单","Atlas","C:\\Demo\\Projects\\Atlas","idle",true,false,"unfinished"],
+      ["thread-b","修复 Atlas API 回归测试","Atlas","C:\\Demo\\Projects\\Atlas","failed",true,false,"unfinished"],
+      ["thread-c","整理 Northstar 接口文档","Northstar","C:\\Demo\\Projects\\Northstar","interrupted",true,false,"unfinished"],
+      ["thread-d","分析示例数据并生成报告","Northstar","C:\\Demo\\Projects\\Northstar","active",false,false,"running"],
+      ["thread-e","归档已完成的设计评审","Sample Workspace","C:\\Demo\\Projects\\Sample-Workspace","idle",true,false,"completed"],
+      ["thread-f","补充桌面端响应式测试","Sample Workspace","C:\\Demo\\Projects\\Sample-Workspace","not_loaded",true,true,"unfinished"],
+      ["thread-g","优化示例产品介绍页面","Sample Workspace","C:\\Demo\\Projects\\Sample-Workspace","not_loaded",true,true,"completed"],
+      ["thread-h","确认下一版本发布范围","Sample Workspace","C:\\Demo\\Projects\\Sample-Workspace","waiting_input",false,false,"completed"],
+      ["thread-i","已交付的组件库整理","Sample Workspace","C:\\Demo\\Projects\\Sample-Workspace","idle",false,false,"completed"]
     ].map(function (row, index) {
       return {
         id: row[0], hostId: "local", title: row[1], projectName: row[2],
@@ -104,6 +104,20 @@
         method: "ui/notifications/tool-result",
         params: { _meta: { silo: inventory }, structuredContent: { count: inventory.count } }
       }, "*");
+      var showcase = hostParams.get("show");
+      if (showcase) {
+        setTimeout(function () {
+          var panel = frame.contentDocument;
+          if (showcase === "smart") {
+            panel.getElementById("smartSelect")?.click();
+            return;
+          }
+          var firstTask = Array.from(panel.querySelectorAll("button")).find(function (button) {
+            return button.getAttribute("aria-label") === "查看任务：“完成 Atlas 发布检查清单”";
+          });
+          firstTask?.click();
+        }, 500);
+      }
     });
     window.addEventListener("message", function (event) {
       if (event.source !== frame.contentWindow) return;
@@ -136,19 +150,19 @@
         result = {
           structuredContent: {
             id: message.params.arguments.id,
-            title: "完善 MemoryRush 实验控制器",
-            cwd: "C:\\Users\\Lenovo\\Documents\\ChatGPT\\MemoryRush",
+            title: "完成 Atlas 发布检查清单",
+            cwd: "C:\\Demo\\Projects\\Atlas",
             status: "idle", canAcceptDirectInput: true, messageCount: 4,
             messagesTruncated: false, nextBefore: null, readAt: Date.now(),
             messages: [
-              { id: "m1", role: "user", text: "请完善实验控制器，并验证关键流程。", createdAt: now - 420000 },
-              { id: "m2", role: "assistant", text: "我会先检查现有实现，再补齐生命周期管理和状态持久化。", createdAt: now - 410000 },
-              { id: "m3", role: "user", text: "同时确保不同大小窗口没有截断。", createdAt: now - 180000 },
-              { id: "m4", role: "assistant", text: "已完成布局检查。下一步会覆盖窄屏、矮窗口与文件预览状态。", createdAt: now - 170000 }
+              { id: "m1", role: "user", text: "请完成发布检查清单，并验证关键流程。", createdAt: now - 420000 },
+              { id: "m2", role: "assistant", text: "我会先检查当前实现，再核对构建、测试和发布说明。", createdAt: now - 410000 },
+              { id: "m3", role: "user", text: "同时确认不同大小窗口都没有截断。", createdAt: now - 180000 },
+              { id: "m4", role: "assistant", text: "布局检查已完成。下一步会覆盖窄屏、短窗口与文件预览。", createdAt: now - 170000 }
             ],
             files: [
-              { path: "C:\\Users\\Lenovo\\Documents\\ChatGPT\\MemoryRush\\src\\controller.mjs", name: "controller.mjs", source: "conversation", size: 4820, modifiedAt: now - 100000 },
-              { path: "C:\\Users\\Lenovo\\Documents\\ChatGPT\\MemoryRush\\README.md", name: "README.md", source: "workspace", size: 1930, modifiedAt: now - 240000 }
+              { path: "C:\\Demo\\Projects\\Atlas\\src\\release-check.mjs", name: "release-check.mjs", source: "conversation", size: 4820, modifiedAt: now - 100000 },
+              { path: "C:\\Demo\\Projects\\Atlas\\README.md", name: "README.md", source: "workspace", size: 1930, modifiedAt: now - 240000 }
             ]
           }
         };
@@ -179,7 +193,7 @@
             mode: mode,
             modeLabel: mode === "continue" ? "继续工作" : "优化工作",
             prompt: (mode === "continue"
-              ? "【执行目标】\n请完善 MemoryRush 实验控制器。\n\n【执行要求】\n1. 完成生命周期管理\n2. 完成状态持久化\n3. 验证关键流程"
+              ? "【执行目标】\n请完成 Atlas 发布检查清单。\n\n【执行要求】\n1. 检查构建产物\n2. 核对自动化测试\n3. 验证发布说明"
               : "【执行目标】\n在现有成果上进行一次有证据的优化冲刺。") +
               (message.params.arguments.burn ? "\n\n【Burn 执行策略｜已开启】\n- 并行推进可独立验证的工作。" : ""),
             maxLength: 6000
@@ -210,7 +224,7 @@
           structuredContent: {
             id: requestedJobId, planId: requestedPlanId, status: nativeDone ? "completed" : "running",
             total: 1, running: nativeDone ? 0 : 1, completed: nativeDone ? 1 : 0, failed: 0, skipped: 0,
-            targets: [{ threadId: "thread-a", title: "完善 MemoryRush 实验控制器", status: nativeDone ? "completed" : "running", phase: nativeDone ? "finished" : "sent" }]
+            targets: [{ threadId: "thread-a", title: "完成 Atlas 发布检查清单", status: nativeDone ? "completed" : "running", phase: nativeDone ? "finished" : "sent" }]
           }
         };
       } else if (message.method === "tools/call" && message.params.name === "list_native_jobs") {
@@ -220,7 +234,7 @@
               id: "native-restored-job", planId: "silo-restored-plan", status: "running",
               total: 1, pending: 0, running: 1, completed: 0, failed: 0, skipped: 0,
               updatedAt: Date.now(),
-              targets: [{ threadId: "thread-a", title: "完善 MemoryRush 实验控制器", cwd: "C:\\MemoryRush", status: "running", phase: "monitoring" }]
+              targets: [{ threadId: "thread-a", title: "完成 Atlas 发布检查清单", cwd: "C:\\Demo\\Projects\\Atlas", status: "running", phase: "monitoring" }]
             }]
           }
         };

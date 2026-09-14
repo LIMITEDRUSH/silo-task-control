@@ -8,6 +8,8 @@ Current release: **v0.6.2** (`0.6.2+codex.20260914`)
 
 ![SILO task control overview](docs/images/silo-overview.png)
 
+> Screenshots are rendered from the current `ui/control.html` with a local Mock Host. All projects, tasks, conversations, paths, activity, and quota values shown are fictional sample data; no personal Codex task data is used.
+
 ## What SILO gives you
 
 SILO keeps the high-frequency controls in one workbench: find the right task, decide whether to Continue or Optimize it, review the exact prompt and settings, then launch only after confirmation.
