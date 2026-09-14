@@ -151,8 +151,9 @@ assert.match(html, /function createComposerChoice\(kind,value,choices,onChoose,d
 assert.match(html, /className="composer-choice "\+kind/);
 assert.match(html, /modelName\.textContent=shownModel/);
 assert.match(html, /modelEffort\.textContent=effortChoiceLabel\(shownEffort\)\+" effort"/);
-assert.match(html, /selectable&&!mode\?" default":""/);
-assert.match(html, /"默认\\n优化":"默认\\n继续"/);
+assert.match(html, /tag\.className="task-mode-tag "\+\(mode\|\|"conversation"\)/);
+assert.match(html, /tag\.textContent=english\?"In chat":"对话中"/);
+assert.doesNotMatch(html, /Local MCP Apps|Mock Host|No Real Task Mutations/);
 assert.match(html, /#filesPane\{display:block;width:100%;max-width:100%;min-width:0;min-height:0;overflow:hidden\}/);
 assert.match(html, /\.code-reader\{width:100%;max-width:100%;min-width:0;min-height:0;overflow:auto/);
 assert.match(html, /views\.appendChild\(els\.smartSelect\)/);
