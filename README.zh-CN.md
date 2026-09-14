@@ -8,7 +8,7 @@ SILO 是一个简约、轻量的 Codex 控制面板，用于跨项目扫描现�
 
 ![SILO 任务控制面板总览](docs/images/silo-overview.png)
 
-> 截图由当前版本的 `ui/control.html` 配合本地 Mock Host 渲染。图中的项目、任务、对话、路径、运行状态与额度均为虚构示例数据，不包含任何用户的真实 Codex 任务。
+> 上方总览图是维护者提供的 SILO 在 Codex 中的实际运行截图。下方的聚焦对话和紧凑布局截图由当前 `ui/control.html` 配合虚构的本地 Mock Host 数据渲染。
 
 ## SILO 能帮你做什么
 

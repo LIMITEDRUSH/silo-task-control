@@ -8,7 +8,7 @@ Current release: **v0.6.2** (`0.6.2+codex.20260914`)
 
 ![SILO task control overview](docs/images/silo-overview.png)
 
-> Screenshots are rendered from the current `ui/control.html` with a local Mock Host. All projects, tasks, conversations, paths, activity, and quota values shown are fictional sample data; no personal Codex task data is used.
+> The overview above is a maintainer-provided capture of SILO in Codex. The focused conversation and compact-layout screenshots below are rendered from the current `ui/control.html` with fictional local Mock Host data.
 
 ## What SILO gives you
 
