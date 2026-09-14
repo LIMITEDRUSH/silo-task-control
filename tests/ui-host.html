@@ -43,6 +43,7 @@
       document.querySelector("iframe").style.height = "760px";
     }
     var now = Date.now(), nativeReads = 0;
+    var quotaPlan = hostParams.get("plan") === "plus" ? "plus" : "pro";
     var legacyInit = new URLSearchParams(location.search).get("legacyInit");
     var tasks = [
       ["thread-a","完善 MemoryRush 实验控制器","MemoryRush","C:\\Users\\Lenovo\\Documents\\ChatGPT\\MemoryRush","idle",true,false,"unfinished"],
@@ -73,8 +74,12 @@
       runnableCount: tasks.filter(function (t) { return t.runnable; }).length,
       collisionRiskCount: tasks.filter(function (t) { return t.runnable && t.collisionRisk; }).length,
       warning: null, inventoryTruncated: false, tasks: tasks,
-      rateLimits: {
-        primary: { remainingPercent: 84 },
+      rateLimits: quotaPlan === "plus" ? {
+        primary: { remainingPercent: 74, windowDurationMins: 300, resetsAt: now + 2.75 * 60 * 60 * 1000 },
+        secondary: { remainingPercent: 61, windowDurationMins: 10080, resetsAt: now + 4.4 * 24 * 60 * 60 * 1000 },
+        planType: "plus", limitName: "Codex", resetCredits: 1
+      } : {
+        primary: { remainingPercent: 84, windowDurationMins: 10080, resetsAt: now + 4.4 * 24 * 60 * 60 * 1000 },
         secondary: { remainingPercent: 61 },
         planType: "pro", limitName: "Codex", resetCredits: 1
       },
