@@ -17,6 +17,12 @@ codex plugin add silo-en@silo-plugins
 codex plugin add silo-cn@silo-plugins
 ```
 
+For the dedicated macOS package that preserves the v0.6.0 workbench while fitting the Codex side panel:
+
+```bash
+codex plugin add silo-mac@silo-plugins
+```
+
 Restart Codex after the first installation. Open **SILO** from the sidebar or start a new task and ask:
 
 ```text

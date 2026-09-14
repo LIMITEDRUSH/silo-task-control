@@ -1,0 +1,31 @@
+{
+  "name": "silo-mac",
+  "version": "0.6.0-mac.1+codex.20260914",
+  "description": "SILO for Mac preserves the v0.6.0 workbench and behavior while adapting its task ledger, header, toolbar, and shortcuts to the macOS Codex panel.",
+  "author": {
+    "name": "LIMITEDRUSH"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "SILO for Mac",
+    "shortDescription": "The v0.6.0 SILO panel, fitted for Codex on macOS.",
+    "longDescription": "SILO for Mac preserves the v0.6.0 workbench and behavior while adapting its task ledger, header, toolbar, and shortcuts to the macOS Codex panel.",
+    "developerName": "LIMITEDRUSH",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Task management",
+      "Local inventory",
+      "Quota monitoring"
+    ],
+    "defaultPrompt": [
+      "Open the SILO control panel and scan my current Codex tasks.",
+      "Show every Codex task that is currently running.",
+      "Use SILO Smart select and recommend tasks to continue or optimize."
+    ],
+    "brandColor": "#D97757",
+    "composerIcon": "./assets/icon.svg",
+    "logo": "./assets/logo.svg"
+  },
+  "mcpServers": "./.mcp.json"
+}

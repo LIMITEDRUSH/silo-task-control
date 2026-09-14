@@ -32,6 +32,19 @@ const variants = [
       "Use SILO Smart select and recommend tasks to continue or optimize.",
     ],
   },
+  {
+    name: "silo-mac",
+    locale: "en",
+    packageVersion: `${rootPackage.version}-mac.1`,
+    displayName: "SILO for Mac",
+    shortDescription: "The v0.6.0 SILO panel, fitted for Codex on macOS.",
+    longDescription: "SILO for Mac preserves the v0.6.0 workbench and behavior while adapting its task ledger, header, toolbar, and shortcuts to the macOS Codex panel.",
+    defaultPrompt: [
+      "Open the SILO control panel and scan my current Codex tasks.",
+      "Show every Codex task that is currently running.",
+      "Use SILO Smart select and recommend tasks to continue or optimize.",
+    ],
+  },
 ];
 
 const sharedDirectories = ["assets", "desktop", "dist", "src", "ui"];
@@ -54,9 +67,10 @@ for (const variant of variants) {
     join(target, "skills", "silo-task-control", "SKILL.md"),
     { force: true },
   );
+  const packageVersion = variant.packageVersion || rootPackage.version;
   const packageJson = {
     name: variant.name,
-    version: rootPackage.version,
+    version: packageVersion,
     private: true,
     type: "module",
     engines: rootPackage.engines,
@@ -64,13 +78,15 @@ for (const variant of variants) {
   };
   const packageLock = structuredClone(rootLock);
   packageLock.name = variant.name;
+  packageLock.version = packageVersion;
   packageLock.packages[""].name = variant.name;
+  packageLock.packages[""].version = packageVersion;
   await writeFile(join(target, "package.json"), `${JSON.stringify(packageJson, null, 2)}\n`);
   await writeFile(join(target, "package-lock.json"), `${JSON.stringify(packageLock, null, 2)}\n`);
 
   const manifest = {
     name: variant.name,
-    version,
+    version: variant.packageVersion ? `${variant.packageVersion}+codex.20260914` : version,
     description: variant.longDescription,
     author: { name: "LIMITEDRUSH" },
     skills: "./skills/",

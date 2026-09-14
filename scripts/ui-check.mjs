@@ -54,6 +54,11 @@ assert.match(html, /ui\/notifications\/host-context-changed/);
 assert.match(html, /openai:set_globals.*followHostLocale/s);
 assert.match(html, /locale:locale.*preview_task_prompt|preview_task_prompt.*locale:locale/s);
 assert.match(html, /prepare_batch.*locale:locale/s);
+assert.match(html, /function detectMacPlatform\(\)/);
+assert.match(html, /html\.platform-mac/);
+assert.match(html, /mac-ledger-compact/);
+assert.match(html, /ResizeObserver/);
+assert.match(html, /Meta\+K/);
 
 assert.doesNotMatch(html, /id=["']projectCount["']/);
 assert.doesNotMatch(html, /id=["']runnableCount["']/);

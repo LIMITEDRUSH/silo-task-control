@@ -17,6 +17,12 @@ codex plugin add silo-cn@silo-plugins
 codex plugin add silo-en@silo-plugins
 ```
 
+如果需要保持 v0.6.0 工作台外观、同时适配 Codex 内置面板的独立 macOS 包：
+
+```bash
+codex plugin add silo-mac@silo-plugins
+```
+
 首次安装后重启 Codex。可以从侧边栏打开 **SILO**，也可以新建任务后输入：
 
 ```text
