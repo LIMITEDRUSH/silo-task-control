@@ -1,6 +1,6 @@
 {
   "name": "silo-cn",
-  "version": "0.5.7+codex.20260913",
+  "version": "0.5.8+codex.20260913",
   "description": "SILO 会自动跟随本地 Codex 的语言，用于扫描、筛选、批量继续或优化任务，并查看当前运行任务与历史批次。",
   "author": {
     "name": "LIMITEDRUSH"
