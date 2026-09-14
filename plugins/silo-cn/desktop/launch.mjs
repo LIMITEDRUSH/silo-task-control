@@ -1,8 +1,9 @@
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { existsSync, readdirSync } from "node:fs";
 import { createConnection } from "node:net";
 import { delimiter, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { executableOnPath, resolveCodexCommand } from "../src/platform-runtime.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const SERVER_PATH = fileURLToPath(new URL("./server.mjs", import.meta.url));
@@ -40,18 +41,6 @@ function portIsOpen(port, timeoutMs = 150) {
   });
 }
 
-function where(command) {
-  const result = spawnSync("where.exe", [command], {
-    encoding: "utf8",
-    windowsHide: true,
-  });
-  if (result.status !== 0) return null;
-  return String(result.stdout || "")
-    .split(/\r?\n/)
-    .map((value) => value.trim())
-    .find((value) => value && existsSync(value)) || null;
-}
-
 function findNewest(root, filename) {
   if (!root || !existsSync(root)) return null;
   const pending = [root];
@@ -76,21 +65,44 @@ function findNewest(root, filename) {
 }
 
 function resolveCodex() {
-  for (const candidate of [process.env.CODEX_CLI_PATH, process.env.CODEX_BIN]) {
-    if (candidate && existsSync(candidate)) return candidate;
-  }
-  const onPath = where("codex");
-  if (onPath) return onPath;
-  return findNewest(join(process.env.LOCALAPPDATA || "", "OpenAI", "Codex", "bin"), "codex.exe");
+  const resolved = resolveCodexCommand();
+  if (resolved !== "codex" || process.platform !== "win32") return resolved;
+  return findNewest(join(process.env.LOCALAPPDATA || "", "OpenAI", "Codex", "bin"), "codex.exe") || resolved;
 }
 
-function resolveEdge() {
-  const candidates = [
-    join(process.env["ProgramFiles(x86)"] || "", "Microsoft", "Edge", "Application", "msedge.exe"),
-    join(process.env.ProgramFiles || "", "Microsoft", "Edge", "Application", "msedge.exe"),
-  ];
-  const installed = candidates.find((candidate) => candidate && existsSync(candidate));
-  return installed || where("msedge");
+export function resolveDesktopBrowser(options = {}) {
+  const platform = options.platform || process.platform;
+  const env = options.env || process.env;
+  const exists = options.existsFn || existsSync;
+  if (platform === "win32") {
+    const candidates = [
+      join(env["ProgramFiles(x86)"] || "", "Microsoft", "Edge", "Application", "msedge.exe"),
+      join(env.ProgramFiles || "", "Microsoft", "Edge", "Application", "msedge.exe"),
+      executableOnPath("msedge", { env, platform, existsFn: exists }),
+    ];
+    const executable = candidates.find((candidate) => candidate && exists(candidate));
+    return executable ? { executable, mode: "chromium-app" } : null;
+  }
+  if (platform === "darwin") {
+    const candidates = [
+      "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+      "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+      "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    ];
+    const executable = candidates.find((candidate) => exists(candidate));
+    return executable
+      ? { executable, mode: "chromium-app" }
+      : { executable: "/usr/bin/open", mode: "default-browser" };
+  }
+  return null;
+}
+
+export function browserArguments(browser, url) {
+  if (browser.mode === "chromium-app") {
+    return ["--app=" + url, "--start-maximized", "--disable-features=msEdgeSidebarV2"];
+  }
+  return [url];
 }
 
 async function choosePort() {
@@ -117,10 +129,12 @@ async function waitUntilReady(port, timeoutMs = 3_000) {
 }
 
 async function main() {
-  if (process.platform !== "win32") throw new Error("The SILO external panel currently requires Windows.");
+  if (!["win32", "darwin"].includes(process.platform)) {
+    throw new Error("The SILO external panel currently supports Windows and macOS.");
+  }
   if (!existsSync(SERVER_PATH)) throw new Error("SILO desktop server is missing.");
-  const edgePath = resolveEdge();
-  if (!edgePath) throw new Error("Microsoft Edge was not found.");
+  const browser = resolveDesktopBrowser();
+  if (!browser) throw new Error("No supported desktop browser was found.");
   const selected = await choosePort();
   if (!selected.running) {
     const codexPath = resolveCodex();
@@ -142,16 +156,19 @@ async function main() {
     await waitUntilReady(selected.port);
   }
   const url = `http://${HOST}:${selected.port}/?desktop=1`;
-  const edge = spawn(
-    edgePath,
-    ["--app=" + url, "--start-maximized", "--disable-features=msEdgeSidebarV2"],
+  const browserProcess = spawn(
+    browser.executable,
+    browserArguments(browser, url),
     { detached: true, stdio: "ignore", windowsHide: false },
   );
-  edge.unref();
+  browserProcess.unref();
   process.stdout.write(JSON.stringify({ ok: true, port: selected.port, reused: selected.running, url }) + "\n");
 }
 
-main().catch((error) => {
-  process.stderr.write(`SILO launch failed: ${error?.message || String(error)}\n`);
-  process.exitCode = 1;
-});
+const isMain = normalizePath(process.argv[1]) === normalizePath(fileURLToPath(import.meta.url));
+if (isMain) {
+  main().catch((error) => {
+    process.stderr.write(`SILO launch failed: ${error?.message || String(error)}\n`);
+    process.exitCode = 1;
+  });
+}

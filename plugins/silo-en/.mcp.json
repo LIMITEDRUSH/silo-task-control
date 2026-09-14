@@ -14,8 +14,10 @@
       "env_vars": [
         "CODEX_CLI_PATH",
         "CODEX_HOME",
+        "HOME",
         "USERPROFILE",
         "LOCALAPPDATA",
+        "XDG_DATA_HOME",
         "PATH"
       ],
       "startup_timeout_sec": 20,

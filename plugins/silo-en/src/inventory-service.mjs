@@ -12,6 +12,7 @@ import {
 } from "node:fs";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { homedir } from "node:os";
+import { siloDataPath } from "./platform-runtime.mjs";
 
 const SCOPES = new Set(["active", "archived", "all"]);
 const DESKTOP_ACTIVITY_WINDOW_MS = 10 * 60 * 1000;
@@ -305,8 +306,7 @@ export class InventoryService {
     this.snapshotPath =
       options.snapshotPath === false
         ? null
-        : options.snapshotPath ||
-          join(process.env.LOCALAPPDATA || join(homedir(), "AppData", "Local"), "SILO", "native-snapshot.json");
+        : options.snapshotPath || siloDataPath("native-snapshot.json", options);
     this.nativeSnapshot = new Map();
     this.nativeSnapshotAt = 0;
     this.#loadNativeSnapshot();

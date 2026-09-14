@@ -101,8 +101,8 @@ function nativeJobToolResult(job) {
 }
 
 function launchExternalPanel() {
-  if (process.platform !== "win32") {
-    throw new Error("SILO 外置面板目前仅支持 Windows");
+  if (!["win32", "darwin"].includes(process.platform)) {
+    throw new Error("SILO 外置面板目前支持 Windows 和 macOS");
   }
   if (!EXTERNAL_PANEL_LAUNCHER_PATH) {
     throw new Error("找不到 SILO 外置面板启动器");
@@ -435,7 +435,7 @@ server.registerTool(
   {
     title: "Open SILO external panel",
     description:
-      "Open SILO in its lightweight external Windows panel. Use only when the user explicitly chooses the external surface; this does not dispatch or modify any Codex task.",
+      "Open SILO in its lightweight external Windows or macOS panel. Use only when the user explicitly chooses the external surface; this does not dispatch or modify any Codex task.",
     inputSchema: {},
     annotations: {
       readOnlyHint: false,

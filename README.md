@@ -4,13 +4,13 @@
 
 SILO is a lightweight Codex control panel for scanning existing tasks across projects, reviewing the exact Continue or Optimize prompt for each task, and dispatching a confirmed batch through Codex's native task tools.
 
-Current release: **v0.5.9** (`0.5.9+codex.20260913`)
+Current release: **v0.6.0** (`0.6.0+codex.20260914`)
 
 ## Install
 
 Add the GitHub repository as a Codex marketplace, then install SILO:
 
-```powershell
+```sh
 codex plugin marketplace add LIMITEDRUSH/silo-task-control
 codex plugin add silo-en@silo-plugins
 # Existing Chinese package name is also supported:
@@ -27,18 +27,21 @@ Both package names now use the same automatic localization behavior. SILO reads 
 
 Update later with:
 
-```powershell
+```sh
 codex plugin marketplace upgrade silo-plugins
 codex plugin add silo-en@silo-plugins
 ```
 
-SILO currently targets Windows and requires Codex Desktop plus Node.js 22.5 or newer.
+SILO supports Windows and macOS and requires Codex Desktop plus Node.js 22.5 or newer. Both platforms run the same bundled MCP server and the same responsive `control.html`, so the in-Codex UI and feature set stay identical.
+
+On macOS, also install the current [Codex CLI](https://developers.openai.com/codex/cli) so `codex` is available in your shell. SILO recognizes the official standalone install under `~/.local/bin` as well as Homebrew locations.
 
 ## Highlights
 
 - Fast local task inventory with Codex-native running-state synchronization and a SQLite fallback.
 - Automatic Simplified Chinese/English localization that follows the local Codex language.
 - Minimal **All / To do / Completed / Smart select** workflow with global search and project grouping.
+- Reversible **🚀 Launch** preset that uses Smart select recommendations, then applies Continue, Burn, Fast, and conversation-following model/effort settings without starting tasks immediately.
 - Exact per-task prompt review, Continue/Optimize mode, independent Burn strategy, model and reasoning controls, and explicit launch confirmation.
 - A live activity rail backed by durable native jobs, atomic target claims, and progress restoration after the panel or server restarts.
 - Lightweight quota polling and reset prediction. Reset information is fetched from the third-party [codex-reset.com](https://codex-reset.com/) service when the panel opens.
@@ -50,15 +53,17 @@ Opening, scanning, filtering, and Smart select are read-only. Smart select revie
 
 Launch requires an explicit review dialog. SILO persists a short-lived plan, sends a visible follow-up message, re-reads each target through native Codex task tools, skips active or attention-blocked tasks, atomically claims each eligible target, and records progress in the activity rail. It never creates, forks, archives, renames, or interrupts unrelated tasks.
 
-## External Windows panel
+## External panel
 
-Choose **External window** in SILO, or double-click `desktop\Start SILO.cmd`. The launcher uses the Node and Codex runtimes bundled with Codex Desktop, starts a loopback-only service, and opens the same panel in an Edge application window.
+Choose **External window** in SILO. On Windows, you can also double-click `desktop\Start SILO.cmd`; on macOS, open `desktop/Start SILO.command`. The launcher starts a loopback-only service and opens the same panel in an app-style browser window. macOS prefers Chrome, Edge, Brave, or Chromium and falls back to the default browser. The Codex CLI is discovered from `CODEX_CLI_PATH`, `PATH`, or common Homebrew locations.
+
+SILO stores its transient desktop activity under `%LOCALAPPDATA%\SILO` on Windows and `~/Library/Application Support/SILO` on macOS. Task history remains in the local Codex data directory (`CODEX_HOME` or `~/.codex`) on both platforms.
 
 ## Sidebar entry
 
 SILO advertises its MCP App as a global entry point, allowing compatible Codex Desktop builds to show **SILO** in the sidebar. This metadata is still an undocumented host behavior. After a Codex Desktop upgrade, run:
 
-```powershell
+```sh
 npm run sidebar-doctor
 ```
 
@@ -66,7 +71,7 @@ The doctor performs a read-only compatibility check. SILO does not patch Codex o
 
 ## Development
 
-```powershell
+```sh
 npm install
 npm run check
 ```

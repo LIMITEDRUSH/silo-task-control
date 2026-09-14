@@ -66,6 +66,7 @@ try {
     "diagnostics",
     "get_batch_plan",
     "list_native_jobs",
+    "list_task_approvals",
     "open_external_panel",
     "prepare_batch",
     "preview_task_prompt",
@@ -73,11 +74,15 @@ try {
     "read_native_job",
     "read_quota",
     "read_reset_prediction",
+    "read_task_details",
+    "read_task_file",
     "recommend_tasks",
     "record_native_job_target",
     "render_task_control_panel",
+    "resolve_task_approval",
     "scan_running_tasks",
     "scan_tasks",
+    "send_task_prompt",
   ]);
   const renderTool = listed.tools.find((tool) => tool.name === "render_task_control_panel");
   assert.equal(renderTool.title, "SILO");

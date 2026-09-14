@@ -11,8 +11,8 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import { homedir } from "node:os";
 import { dirname, join } from "node:path";
+import { siloDataPath } from "./platform-runtime.mjs";
 
 export const TARGET_STATUSES = Object.freeze([
   "pending",
@@ -32,9 +32,8 @@ const DEFAULT_STALE_LOCK_MS = 30_000;
 const DEFAULT_CLAIM_LEASE_MS = 2 * 60 * 1000;
 const sleepArray = new Int32Array(new SharedArrayBuffer(4));
 
-export function defaultNativeJobsPath(env = process.env) {
-  const localData = env.LOCALAPPDATA || join(homedir(), ".local", "share");
-  return join(localData, "SILO", "native-jobs.json");
+export function defaultNativeJobsPath(env = process.env, options = {}) {
+  return siloDataPath("native-jobs.json", { env, ...options });
 }
 
 function clone(value) {
@@ -175,7 +174,7 @@ export class NativeJobStore {
   constructor(options = {}) {
     this.filePath = options.persistence === false || options.filePath === false
       ? null
-      : options.filePath || defaultNativeJobsPath(options.env);
+      : options.filePath || defaultNativeJobsPath(options.env, options);
     this.maxJobs = options.maxJobs || DEFAULT_MAX_JOBS;
     this.lockTimeoutMs = options.lockTimeoutMs || DEFAULT_LOCK_TIMEOUT_MS;
     this.staleLockMs = options.staleLockMs || DEFAULT_STALE_LOCK_MS;

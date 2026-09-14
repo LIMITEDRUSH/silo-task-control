@@ -1496,8 +1496,8 @@ var init_regexes = __esm({
     _emoji = `^[\\p{Extended_Pictographic}\\p{Emoji_Component}]+$`;
     ipv4 = /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$/;
     ipv6 = /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:))$/;
-    mac = (delimiter) => {
-      const escapedDelim = escapeRegex(delimiter ?? ":");
+    mac = (delimiter2) => {
+      const escapedDelim = escapeRegex(delimiter2 ?? ":");
       return new RegExp(`^(?:[0-9A-F]{2}${escapedDelim}){5}[0-9A-F]{2}$|^(?:[0-9a-f]{2}${escapedDelim}){5}[0-9a-f]{2}$`);
     };
     cidrv4 = /^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\/([0-9]|[1-2][0-9]|3[0-2])$/;
@@ -26767,9 +26767,9 @@ var require_dist = __commonJS({
 
 // src/server.mjs
 import { spawn as spawn2 } from "node:child_process";
-import { existsSync as existsSync3, readFileSync as readFileSync3 } from "node:fs";
+import { existsSync as existsSync4, readFileSync as readFileSync3 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
-import { join as join3 } from "node:path";
+import { join as join4 } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // node_modules/.pnpm/zod@4.5.4/node_modules/zod/v3/external.js
@@ -36652,11 +36652,67 @@ function N3(Z, $, J, X, V) {
 import { EventEmitter } from "node:events";
 import { spawn } from "node:child_process";
 import readline from "node:readline";
+
+// src/platform-runtime.mjs
+import { existsSync } from "node:fs";
+import { homedir } from "node:os";
+import { delimiter, join } from "node:path";
+function applicationDataRoot(options = {}) {
+  const env = options.env || process.env;
+  const platform = options.platform || process.platform;
+  const home = options.home || homedir();
+  if (platform === "win32") {
+    return env.LOCALAPPDATA || join(home, "AppData", "Local");
+  }
+  if (platform === "darwin") {
+    return join(home, "Library", "Application Support");
+  }
+  return env.XDG_DATA_HOME || join(home, ".local", "share");
+}
+function siloDataPath(filename, options = {}) {
+  return join(applicationDataRoot(options), "SILO", filename);
+}
+function executableOnPath(command, options = {}) {
+  const env = options.env || process.env;
+  const platform = options.platform || process.platform;
+  const exists = options.existsFn || existsSync;
+  const extensions = platform === "win32" ? String(env.PATHEXT || ".EXE;.CMD;.BAT;.COM").split(";") : [""];
+  for (const directory of String(env.PATH || "").split(delimiter).filter(Boolean)) {
+    for (const extension of extensions) {
+      const candidate = join(directory, `${command}${extension}`);
+      if (exists(candidate)) return candidate;
+    }
+  }
+  return null;
+}
+function resolveCodexCommand(options = {}) {
+  const env = options.env || process.env;
+  const platform = options.platform || process.platform;
+  const home = options.home || homedir();
+  const exists = options.existsFn || existsSync;
+  for (const candidate of [env.CODEX_CLI_PATH, env.CODEX_BIN]) {
+    if (candidate && exists(candidate)) return candidate;
+  }
+  const onPath = executableOnPath("codex", { env, platform, existsFn: exists });
+  if (onPath) return onPath;
+  if (platform === "darwin") {
+    const candidates = [
+      join(home, ".local", "bin", "codex"),
+      "/opt/homebrew/bin/codex",
+      "/usr/local/bin/codex"
+    ];
+    const installed = candidates.find((candidate) => exists(candidate));
+    if (installed) return installed;
+  }
+  return "codex";
+}
+
+// src/app-server-client.mjs
 var DEFAULT_TIMEOUT_MS = 12e4;
 var CodexAppServer = class extends EventEmitter {
   constructor(options = {}) {
     super();
-    this.codexBin = options.codexBin || process.env.CODEX_CLI_PATH || process.env.CODEX_BIN || "codex";
+    this.codexBin = options.codexBin || resolveCodexCommand(options);
     this.process = null;
     this.pending = /* @__PURE__ */ new Map();
     this.nextId = 1;
@@ -36961,7 +37017,7 @@ var CodexAppServer = class extends EventEmitter {
 // src/inventory-service.mjs
 import {
   closeSync,
-  existsSync,
+  existsSync as existsSync2,
   fstatSync,
   mkdirSync,
   openSync,
@@ -36971,12 +37027,12 @@ import {
   statSync,
   writeFileSync
 } from "node:fs";
-import { basename, dirname, join, relative, resolve, sep } from "node:path";
-import { homedir } from "node:os";
+import { basename, dirname, join as join2, relative, resolve, sep } from "node:path";
+import { homedir as homedir2 } from "node:os";
 var SCOPES = /* @__PURE__ */ new Set(["active", "archived", "all"]);
 var DESKTOP_ACTIVITY_WINDOW_MS = 10 * 60 * 1e3;
 function rolloutHasRecentOpenTurn(path) {
-  if (!path || !existsSync(path)) return false;
+  if (!path || !existsSync2(path)) return false;
   let fd;
   try {
     fd = openSync(path, "r");
@@ -37050,7 +37106,7 @@ function collectConversationFiles(thread) {
   return files;
 }
 function recentWorkspaceFiles(root, existing, limit = 80) {
-  if (!root || !existsSync(root)) return [...existing.values()];
+  if (!root || !existsSync2(root)) return [...existing.values()];
   const skip = /* @__PURE__ */ new Set([".git", "node_modules", ".next", "dist", "build", ".venv", "venv", "__pycache__"]);
   const candidates = [];
   const stack = [{ path: root, depth: 0 }];
@@ -37066,7 +37122,7 @@ function recentWorkspaceFiles(root, existing, limit = 80) {
     for (const entry of entries) {
       if (visited++ >= 900) break;
       if (entry.name.startsWith(".") && entry.name !== ".env.example") continue;
-      const path = join(current.path, entry.name);
+      const path = join2(current.path, entry.name);
       if (entry.isDirectory()) {
         if (current.depth < 3 && !skip.has(entry.name)) stack.push({ path, depth: current.depth + 1 });
         continue;
@@ -37191,7 +37247,7 @@ function recommendationFor(task, context) {
 }
 function isRunnable(status, cwd, archived) {
   return Boolean(
-    !archived && cwd && existsSync(cwd) && ["idle", "not_loaded", "interrupted", "failed"].includes(status)
+    !archived && cwd && existsSync2(cwd) && ["idle", "not_loaded", "interrupted", "failed"].includes(status)
   );
 }
 function serializeError(error61) {
@@ -37200,7 +37256,7 @@ function serializeError(error61) {
 function blockedReason(status, cwd, archived) {
   if (archived) return "\u4EFB\u52A1\u5DF2\u5F52\u6863";
   if (!cwd) return "\u7F3A\u5C11\u5DE5\u4F5C\u76EE\u5F55";
-  if (!existsSync(cwd)) return "\u5DE5\u4F5C\u76EE\u5F55\u4E0D\u5B58\u5728";
+  if (!existsSync2(cwd)) return "\u5DE5\u4F5C\u76EE\u5F55\u4E0D\u5B58\u5728";
   if (status === "active") return "\u4EFB\u52A1\u6B63\u5728\u5DE5\u4F5C";
   if (status === "waiting_approval") return "\u4EFB\u52A1\u6B63\u5728\u7B49\u5F85\u6743\u9650\u6279\u51C6";
   if (status === "waiting_input") return "\u4EFB\u52A1\u6B63\u5728\u7B49\u5F85\u7528\u6237\u56DE\u590D";
@@ -37210,13 +37266,13 @@ function blockedReason(status, cwd, archived) {
 var InventoryService = class {
   constructor(appServer2, options = {}) {
     this.appServer = appServer2;
-    this.codexHome = options.codexHome || process.env.CODEX_HOME || join(homedir(), ".codex");
+    this.codexHome = options.codexHome || process.env.CODEX_HOME || join2(homedir2(), ".codex");
     this.tasks = /* @__PURE__ */ new Map();
     this.lastScan = null;
     this.scanGeneration = 0;
     this.serverError = null;
     this.source = "offline";
-    this.snapshotPath = options.snapshotPath === false ? null : options.snapshotPath || join(process.env.LOCALAPPDATA || join(homedir(), "AppData", "Local"), "SILO", "native-snapshot.json");
+    this.snapshotPath = options.snapshotPath === false ? null : options.snapshotPath || siloDataPath("native-snapshot.json", options);
     this.nativeSnapshot = /* @__PURE__ */ new Map();
     this.nativeSnapshotAt = 0;
     this.#loadNativeSnapshot();
@@ -37445,8 +37501,8 @@ var InventoryService = class {
   }
   async #readDesktopActivity(threadIds) {
     if (!threadIds.length) return /* @__PURE__ */ new Map();
-    const dbPath = join(this.codexHome, "state_5.sqlite");
-    if (!existsSync(dbPath)) return /* @__PURE__ */ new Map();
+    const dbPath = join2(this.codexHome, "state_5.sqlite");
+    if (!existsSync2(dbPath)) return /* @__PURE__ */ new Map();
     let DatabaseSync;
     try {
       ({ DatabaseSync } = await import("node:sqlite"));
@@ -37480,8 +37536,8 @@ var InventoryService = class {
     }
   }
   async #scanSqlite(scope, liveMap) {
-    const dbPath = join(this.codexHome, "state_5.sqlite");
-    if (!existsSync(dbPath)) throw new Error(`\u627E\u4E0D\u5230 Codex \u72B6\u6001\u6570\u636E\u5E93\uFF1A${dbPath}`);
+    const dbPath = join2(this.codexHome, "state_5.sqlite");
+    if (!existsSync2(dbPath)) throw new Error(`\u627E\u4E0D\u5230 Codex \u72B6\u6001\u6570\u636E\u5E93\uFF1A${dbPath}`);
     let DatabaseSync;
     try {
       ({ DatabaseSync } = await import("node:sqlite"));
@@ -37650,7 +37706,7 @@ var InventoryService = class {
     if (!task) throw new Error(`\u4EFB\u52A1\u4E0D\u5728\u6700\u8FD1\u626B\u63CF\u7ED3\u679C\u4E2D\uFF1A${id || "unknown"}`);
     if (!task.cwd) throw new Error("\u4EFB\u52A1\u5DE5\u4F5C\u76EE\u5F55\u4E0D\u53EF\u7528");
     const root = resolve(String(task.cwd));
-    if (!existsSync(root)) throw new Error("\u4EFB\u52A1\u5DE5\u4F5C\u76EE\u5F55\u4E0D\u53EF\u7528");
+    if (!existsSync2(root)) throw new Error("\u4EFB\u52A1\u5DE5\u4F5C\u76EE\u5F55\u4E0D\u53EF\u7528");
     const candidate = resolve(root, String(requestedPath || ""));
     const rel = relative(root, candidate);
     if (!rel || rel.startsWith(`..${sep}`) || rel === ".." || rel.startsWith(sep)) {
@@ -37676,7 +37732,7 @@ var InventoryService = class {
     };
   }
   #loadNativeSnapshot() {
-    if (!this.snapshotPath || !existsSync(this.snapshotPath)) return;
+    if (!this.snapshotPath || !existsSync2(this.snapshotPath)) return;
     try {
       const stored = JSON.parse(readFileSync(this.snapshotPath, "utf8"));
       if (!stored?.capturedAt || Date.now() - stored.capturedAt >= 10 * 60 * 1e3) return;
@@ -37737,15 +37793,15 @@ var InventoryService = class {
     return this.tasks.get(id) || null;
   }
   diagnostics() {
-    const dbPath = join(this.codexHome, "state_5.sqlite");
-    const sessionsPath = join(this.codexHome, "sessions");
+    const dbPath = join2(this.codexHome, "state_5.sqlite");
+    const sessionsPath = join2(this.codexHome, "sessions");
     return {
       source: this.source,
       appServerReady: this.appServer.ready,
       codexHome: this.codexHome,
-      stateDb: existsSync(dbPath) ? dbPath : null,
-      sessionsDirectory: existsSync(sessionsPath) ? sessionsPath : null,
-      sessionYearFolders: existsSync(sessionsPath) ? readdirSync(sessionsPath).length : 0,
+      stateDb: existsSync2(dbPath) ? dbPath : null,
+      sessionsDirectory: existsSync2(sessionsPath) ? sessionsPath : null,
+      sessionYearFolders: existsSync2(sessionsPath) ? readdirSync(sessionsPath).length : 0,
       lastScan: this.lastScan,
       error: this.serverError,
       stderrTail: this.appServer.stderrTail.slice(-12)
@@ -37757,7 +37813,7 @@ var InventoryService = class {
 import { randomUUID } from "node:crypto";
 import {
   closeSync as closeSync2,
-  existsSync as existsSync2,
+  existsSync as existsSync3,
   fsyncSync,
   mkdirSync as mkdirSync2,
   openSync as openSync2,
@@ -37767,8 +37823,7 @@ import {
   unlinkSync,
   writeFileSync as writeFileSync2
 } from "node:fs";
-import { homedir as homedir2 } from "node:os";
-import { dirname as dirname2, join as join2 } from "node:path";
+import { dirname as dirname2, join as join3 } from "node:path";
 var TARGET_STATUSES = Object.freeze([
   "pending",
   "claimed",
@@ -37785,9 +37840,8 @@ var DEFAULT_LOCK_TIMEOUT_MS = 3e3;
 var DEFAULT_STALE_LOCK_MS = 3e4;
 var DEFAULT_CLAIM_LEASE_MS = 2 * 60 * 1e3;
 var sleepArray = new Int32Array(new SharedArrayBuffer(4));
-function defaultNativeJobsPath(env = process.env) {
-  const localData = env.LOCALAPPDATA || join2(homedir2(), ".local", "share");
-  return join2(localData, "SILO", "native-jobs.json");
+function defaultNativeJobsPath(env = process.env, options = {}) {
+  return siloDataPath("native-jobs.json", { env, ...options });
 }
 function clone2(value) {
   return JSON.parse(JSON.stringify(value));
@@ -37901,7 +37955,7 @@ function assertTransition(current, next) {
 }
 var NativeJobStore = class {
   constructor(options = {}) {
-    this.filePath = options.persistence === false || options.filePath === false ? null : options.filePath || defaultNativeJobsPath(options.env);
+    this.filePath = options.persistence === false || options.filePath === false ? null : options.filePath || defaultNativeJobsPath(options.env, options);
     this.maxJobs = options.maxJobs || DEFAULT_MAX_JOBS;
     this.lockTimeoutMs = options.lockTimeoutMs || DEFAULT_LOCK_TIMEOUT_MS;
     this.staleLockMs = options.staleLockMs || DEFAULT_STALE_LOCK_MS;
@@ -38178,7 +38232,7 @@ var NativeJobStore = class {
     return changed;
   }
   #reload() {
-    if (!this.filePath || !existsSync2(this.filePath)) return;
+    if (!this.filePath || !existsSync3(this.filePath)) return;
     let parsed;
     try {
       parsed = JSON.parse(readFileSync2(this.filePath, "utf8"));
@@ -38628,11 +38682,11 @@ var CONTROL_HTML_PATH = fileURLToPath(new URL("../ui/control.html", import.meta.
 var DEFAULT_LOCALE = process.env.SILO_DEFAULT_LOCALE === "en" ? "en" : "zh-CN";
 var readControlHtml = () => readFileSync3(CONTROL_HTML_PATH, "utf8").replaceAll("__SILO_BUILD_VERSION__", VERSION).replaceAll("__SILO_DEFAULT_LOCALE__", DEFAULT_LOCALE);
 var PLUGIN_ROOT_PATH = fileURLToPath(new URL("..", import.meta.url));
-var SOURCE_PLUGIN_ROOT_PATH = join3(homedir3(), "plugins", "silo-task-control");
+var SOURCE_PLUGIN_ROOT_PATH = join4(homedir3(), "plugins", "silo-task-control");
 var EXTERNAL_PANEL_LAUNCHER_PATH = [
-  join3(SOURCE_PLUGIN_ROOT_PATH, "desktop", "launch.mjs"),
+  join4(SOURCE_PLUGIN_ROOT_PATH, "desktop", "launch.mjs"),
   fileURLToPath(new URL("../desktop/launch.mjs", import.meta.url))
-].find((candidate) => existsSync3(candidate));
+].find((candidate) => existsSync4(candidate));
 var appServer = new CodexAppServer();
 var inventory = new InventoryService(appServer);
 var nativeJobPath = process.env.SILO_NATIVE_JOB_PATH;
@@ -38686,8 +38740,8 @@ function nativeJobToolResult(job) {
   };
 }
 function launchExternalPanel() {
-  if (process.platform !== "win32") {
-    throw new Error("SILO \u5916\u7F6E\u9762\u677F\u76EE\u524D\u4EC5\u652F\u6301 Windows");
+  if (!["win32", "darwin"].includes(process.platform)) {
+    throw new Error("SILO \u5916\u7F6E\u9762\u677F\u76EE\u524D\u652F\u6301 Windows \u548C macOS");
   }
   if (!EXTERNAL_PANEL_LAUNCHER_PATH) {
     throw new Error("\u627E\u4E0D\u5230 SILO \u5916\u7F6E\u9762\u677F\u542F\u52A8\u5668");
@@ -38994,7 +39048,7 @@ server.registerTool(
   "open_external_panel",
   {
     title: "Open SILO external panel",
-    description: "Open SILO in its lightweight external Windows panel. Use only when the user explicitly chooses the external surface; this does not dispatch or modify any Codex task.",
+    description: "Open SILO in its lightweight external Windows or macOS panel. Use only when the user explicitly chooses the external surface; this does not dispatch or modify any Codex task.",
     inputSchema: {},
     annotations: {
       readOnlyHint: false,

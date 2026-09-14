@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const rootPackage = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
 const rootLock = JSON.parse(await readFile(join(root, "package-lock.json"), "utf8"));
-const version = `${rootPackage.version}+codex.20260913`;
+const version = `${rootPackage.version}+codex.20260914`;
 
 const variants = [
   {
@@ -101,7 +101,15 @@ for (const variant of variants) {
         enabled: true,
         default_tools_approval_mode: "approve",
         env: { SILO_DEFAULT_LOCALE: variant.locale },
-        env_vars: ["CODEX_CLI_PATH", "CODEX_HOME", "USERPROFILE", "LOCALAPPDATA", "PATH"],
+        env_vars: [
+          "CODEX_CLI_PATH",
+          "CODEX_HOME",
+          "HOME",
+          "USERPROFILE",
+          "LOCALAPPDATA",
+          "XDG_DATA_HOME",
+          "PATH",
+        ],
         startup_timeout_sec: 20,
         tool_timeout_sec: 900,
       },

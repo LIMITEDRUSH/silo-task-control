@@ -1,12 +1,14 @@
 import { execFileSync } from "node:child_process";
 import { createReadStream, existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const pluginRoot = fileURLToPath(new URL("..", import.meta.url));
 const builtServer = fileURLToPath(new URL("../dist/server.mjs", import.meta.url));
 const sourceServer = fileURLToPath(new URL("../src/server.mjs", import.meta.url));
 
-function readCodexPackage() {
+function readWindowsCodexPackage() {
   const command = [
     "$pkg = Get-AppxPackage OpenAI.Codex | Sort-Object Version -Descending | Select-Object -First 1",
     "if ($null -eq $pkg) { exit 4 }",
@@ -18,6 +20,41 @@ function readCodexPackage() {
     { encoding: "utf8", windowsHide: true },
   ).trim();
   return JSON.parse(stdout);
+}
+
+function readMacCodexPackage() {
+  const installLocation = [
+    "/Applications/Codex.app",
+    join(homedir(), "Applications", "Codex.app"),
+  ].find((candidate) => existsSync(candidate));
+  if (!installLocation) throw new Error("Codex.app was not found in /Applications or ~/Applications");
+  let version = "unknown";
+  try {
+    version = execFileSync(
+      "/usr/bin/plutil",
+      ["-extract", "CFBundleShortVersionString", "raw", "-o", "-", join(installLocation, "Contents", "Info.plist")],
+      { encoding: "utf8" },
+    ).trim();
+  } catch {
+    // The host markers are still useful when bundle version metadata is unavailable.
+  }
+  return { Name: "OpenAI.Codex", Version: version, InstallLocation: installLocation };
+}
+
+function readCodexPackage() {
+  if (process.platform === "win32") return readWindowsCodexPackage();
+  if (process.platform === "darwin") return readMacCodexPackage();
+  throw new Error("The sidebar doctor currently supports Windows and macOS");
+}
+
+function resolveAsarPath(installLocation) {
+  const candidates = process.platform === "darwin"
+    ? [
+        join(installLocation, "Contents", "Resources", "app.asar"),
+        join(installLocation, "Contents", "Resources", "app", "app.asar"),
+      ]
+    : [join(installLocation, "app", "resources", "app.asar")];
+  return candidates.find((candidate) => existsSync(candidate)) || candidates[0];
 }
 
 async function scanFile(path, needles) {
@@ -37,7 +74,7 @@ async function scanFile(path, needles) {
 let report;
 try {
   const codexPackage = readCodexPackage();
-  const asarPath = `${codexPackage.InstallLocation}\\app\\resources\\app.asar`;
+  const asarPath = resolveAsarPath(codexPackage.InstallLocation);
   if (!existsSync(asarPath)) throw new Error(`Codex app.asar not found: ${asarPath}`);
 
   const hostMarkers = await scanFile(asarPath, [

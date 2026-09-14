@@ -1,12 +1,11 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
+import { resolveCodexCommand, siloDataPath } from "./platform-runtime.mjs";
 
-function defaultJournalPath() {
-  const base = process.env.LOCALAPPDATA || join(homedir(), "AppData", "Local");
-  return join(base, "SILO", "jobs.json");
+export function defaultJournalPath(options = {}) {
+  return siloDataPath("jobs.json", options);
 }
 
 function tailPush(lines, chunk) {
@@ -39,9 +38,9 @@ function snapshotJob(job) {
 
 export class DesktopDispatcher {
   constructor(options = {}) {
-    this.codexBin = options.codexBin || process.env.CODEX_CLI_PATH || process.env.CODEX_BIN || "codex";
+    this.codexBin = options.codexBin || resolveCodexCommand(options);
     this.spawnFn = options.spawnFn || spawn;
-    this.journalPath = options.journalPath === false ? null : options.journalPath || defaultJournalPath();
+    this.journalPath = options.journalPath === false ? null : options.journalPath || defaultJournalPath(options);
     this.jobs = new Map();
     this.children = new Map();
     this.#loadJournal();

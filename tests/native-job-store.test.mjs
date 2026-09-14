@@ -73,6 +73,13 @@ test("uses LOCALAPPDATA/SILO/native-jobs.json by default", () => {
   );
 });
 
+test("uses the native macOS Application Support directory", () => {
+  assert.equal(
+    defaultNativeJobsPath({}, { platform: "darwin", home: "/Users/tester" }),
+    join("/Users/tester", "Library", "Application Support", "SILO", "native-jobs.json"),
+  );
+});
+
 test("persists a prepared job and restores both job and plan after restart", (t) => {
   const { filePath, store } = tempStore(t);
   const sourcePlan = plan();

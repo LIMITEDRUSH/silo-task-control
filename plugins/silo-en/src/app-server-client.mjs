@@ -1,14 +1,14 @@
 import { EventEmitter } from "node:events";
 import { spawn } from "node:child_process";
 import readline from "node:readline";
+import { resolveCodexCommand } from "./platform-runtime.mjs";
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 
 export class CodexAppServer extends EventEmitter {
   constructor(options = {}) {
     super();
-    this.codexBin =
-      options.codexBin || process.env.CODEX_CLI_PATH || process.env.CODEX_BIN || "codex";
+    this.codexBin = options.codexBin || resolveCodexCommand(options);
     this.process = null;
     this.pending = new Map();
     this.nextId = 1;

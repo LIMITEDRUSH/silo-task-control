@@ -4,13 +4,13 @@
 
 SILO 是一个简约、轻量的 Codex 控制面板，用于跨项目扫描现有任务、逐项检查将要发送的继续或优化提示词，并通过 Codex 原生任务工具启动用户确认过的批次。
 
-当前版本：**v0.5.9**（`0.5.9+codex.20260913`）
+当前版本：**v0.6.0**（`0.6.0+codex.20260914`）
 
 ## 安装
 
 先把 GitHub 仓库加入 Codex marketplace，再安装 SILO：
 
-```powershell
+```sh
 codex plugin marketplace add LIMITEDRUSH/silo-task-control
 codex plugin add silo-cn@silo-plugins
 # 原英文包名也继续支持：
@@ -27,18 +27,21 @@ $silo-task-control 打开控制面板，扫描我现在的任务。
 
 后续更新：
 
-```powershell
+```sh
 codex plugin marketplace upgrade silo-plugins
 codex plugin add silo-cn@silo-plugins
 ```
 
-SILO 目前面向 Windows，需要 Codex Desktop 和 Node.js 22.5 或更高版本。
+SILO 支持 Windows 与 macOS，需要 Codex Desktop 和 Node.js 22.5 或更高版本。两个平台运行同一个 MCP 服务包和同一个响应式 `control.html`，因此 Codex 内置界面与功能保持一致。
+
+macOS 还需要安装当前版本的 [Codex CLI](https://developers.openai.com/codex/cli)，确保终端中可以运行 `codex`。SILO 能识别官方独立安装使用的 `~/.local/bin`，也能识别常见 Homebrew 路径。
 
 ## 主要能力
 
 - 快速读取本地任务，并结合 Codex 原生状态同步与 SQLite 后备索引。
 - 自动识别本地 Codex 语言，并在简体中文和英文界面之间同步切换。
 - 简洁的 **全部 / 待处理 / 已完成 / 智能选择** 工作流、全局搜索和项目分组。
+- 可撤销的 **🚀 Launch** 一键预设：按智能选择结果加入任务，设置继续、Burn、快速以及跟随原对话的模型/Effort，但不会立即启动。
 - 逐任务检查完整提示词，支持继续/优化、独立 Burn 策略、模型、推理强度及显式启动确认。
 - 使用持久化原生 job、原子 claim 和进度恢复构建实时运行栏；面板或服务重启后仍可恢复状态。
 - 轻量额度轮询和重置预测。面板打开时会从第三方服务 [codex-reset.com](https://codex-reset.com/zh/) 获取重置信息。
@@ -50,15 +53,17 @@ SILO 目前面向 Windows，需要 Codex Desktop 和 Node.js 22.5 或更高版�
 
 启动必须通过确认对话框。SILO 会保存短时有效的计划，发送一条可见的跟进消息，通过 Codex 原生任务工具重新读取每个目标，跳过正在运行或需要用户处理的任务，为每个可用目标执行原子 claim，并把进度写入运行栏。它不会创建、派生、归档、重命名或中断无关任务。
 
-## Windows 外置面板
+## 外置面板
 
-在 SILO 中选择 **外置窗口**，或双击 `desktop\Start SILO.cmd`。启动器会使用 Codex Desktop 自带的 Node 与 Codex 运行时，启动只监听本机回环地址的服务，并在 Edge 应用窗口中打开同一面板。
+在 SILO 中选择 **外置窗口**。Windows 也可双击 `desktop\Start SILO.cmd`；macOS 可打开 `desktop/Start SILO.command`。启动器会启动只监听本机回环地址的服务，并用应用窗口打开同一面板。macOS 优先使用 Chrome、Edge、Brave 或 Chromium，没有 Chromium 浏览器时回退到默认浏览器。Codex CLI 会依次从 `CODEX_CLI_PATH`、`PATH` 和常见 Homebrew 路径中查找。
+
+SILO 的临时桌面运行记录在 Windows 保存到 `%LOCALAPPDATA%\SILO`，在 macOS 保存到 `~/Library/Application Support/SILO`。任务历史在两个平台都继续读取本地 Codex 数据目录（`CODEX_HOME` 或 `~/.codex`）。
 
 ## 侧边栏入口
 
 SILO 会把 MCP App 声明为全局入口，因此兼容的 Codex Desktop 版本可在侧边栏显示 **SILO**。这项宿主元数据目前仍未成为公开 API。Codex Desktop 更新后可运行：
 
-```powershell
+```sh
 npm run sidebar-doctor
 ```
 
@@ -66,7 +71,7 @@ npm run sidebar-doctor
 
 ## 开发
 
-```powershell
+```sh
 npm install
 npm run check
 ```
