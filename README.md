@@ -4,7 +4,7 @@
 
 SILO is a lightweight Codex control panel for scanning existing tasks across projects, reviewing the exact Continue or Optimize prompt for each task, and dispatching a confirmed batch through Codex's native task tools.
 
-Current release: **v0.6.1** (`0.6.1+codex.20260914`)
+Current release: **v0.6.2** (`0.6.2+codex.20260914`)
 
 ## Install
 
@@ -17,7 +17,7 @@ codex plugin add silo-en@silo-plugins
 codex plugin add silo-cn@silo-plugins
 ```
 
-For the dedicated macOS package that preserves the v0.6.1 workbench while fitting the Codex side panel:
+For the dedicated macOS package that preserves the v0.6.2 workbench while fitting the Codex side panel:
 
 ```bash
 codex plugin add silo-mac@silo-plugins

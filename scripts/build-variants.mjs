@@ -37,8 +37,8 @@ const variants = [
     locale: "en",
     packageVersion: `${rootPackage.version}-mac.1`,
     displayName: "SILO for Mac",
-    shortDescription: "The v0.6.1 SILO panel, fitted for Codex on macOS.",
-    longDescription: "SILO for Mac preserves the v0.6.1 workbench and behavior while adapting its task ledger, header, toolbar, and shortcuts to the macOS Codex panel.",
+    shortDescription: "The v0.6.2 SILO panel, fitted for Codex on macOS.",
+    longDescription: "SILO for Mac preserves the v0.6.2 workbench and behavior while adapting its task ledger, header, toolbar, and shortcuts to the macOS Codex panel.",
     defaultPrompt: [
       "Open the SILO control panel and scan my current Codex tasks.",
       "Show every Codex task that is currently running.",

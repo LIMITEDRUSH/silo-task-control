@@ -4,7 +4,7 @@
 
 SILO 是一个简约、轻量的 Codex 控制面板，用于跨项目扫描现有任务、逐项检查将要发送的继续或优化提示词，并通过 Codex 原生任务工具启动用户确认过的批次。
 
-当前版本：**v0.6.1**（`0.6.1+codex.20260914`）
+当前版本：**v0.6.2**（`0.6.2+codex.20260914`）
 
 ## 安装
 
@@ -17,7 +17,7 @@ codex plugin add silo-cn@silo-plugins
 codex plugin add silo-en@silo-plugins
 ```
 
-如果需要保持 v0.6.1 工作台外观、同时适配 Codex 内置面板的独立 macOS 包：
+如果需要保持 v0.6.2 工作台外观、同时适配 Codex 内置面板的独立 macOS 包：
 
 ```bash
 codex plugin add silo-mac@silo-plugins

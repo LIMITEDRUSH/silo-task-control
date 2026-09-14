@@ -1,6 +1,6 @@
 {
   "name": "silo-mac",
-  "version": "0.6.1-mac.1",
+  "version": "0.6.2-mac.1",
   "private": true,
   "type": "module",
   "engines": {
