@@ -10,6 +10,57 @@ Current release: **v0.6.2** (`0.6.2+codex.20260914`)
 
 > The overview above is a maintainer-provided capture of SILO in Codex. The focused conversation and compact-layout screenshots below are rendered from the current `ui/control.html` with fictional local Mock Host data.
 
+## Interface guide
+
+### Task filters and one-click presets
+
+![SILO task filters, Smart select, and Launch](docs/images/silo-controls-zoom.png)
+
+| Control | What it does |
+|---|---|
+| **All / To do / Completed** | Changes only the visible task view. It does not alter the selection or launch anything. Each badge shows the number of tasks in that view. |
+| **Smart select** | Reads at most the latest two turns of candidate tasks and recommends which ones to Continue or Optimize. It proposes; it does not run. |
+| **🚀 Launch** | Uses Smart select logic, then applies Continue, Burn, Fast, and conversation-following model/effort settings. It is a reversible preset: press it again to remove the selections it added. A separate launch confirmation is still required. |
+| **Task checkbox** | Adds that task to or removes it from the current batch. |
+| **Task title** | Opens the task details without changing batch selection. |
+| **⋯** | Opens additional actions for that task. |
+
+### Personal quota, refresh, and dispatch
+
+![SILO quota, refresh, and launch controls](docs/images/silo-quota-controls-zoom.png)
+
+| Control | What it does |
+|---|---|
+| **Quota card** | Shows the current Codex account balance. Plus accounts also show the five-hour window; the adjacent value shows the next standard-window reset. |
+| **Refresh panel** | Rescans tasks, running state, and quota inside the current SILO panel. It does not create a chat or send a prompt to another task. |
+| **Launch selected** | Opens the batch review dialog. It becomes available only when tasks are selected and their prompts are ready; dispatch happens only after confirmation. |
+
+### Top right: Tibo reset prediction
+
+![SILO Tibo reset prediction](docs/images/silo-reset-prediction-zoom.png)
+
+This area shows the **global goodwill-reset outlook**. When SILO opens, it reads the last verified reset and the next prediction from the third-party [codex-reset.com](https://codex-reset.com/) tracker. That site follows Tibo's ([@thsottiaux](https://x.com/thsottiaux)) public X/Twitter posts, verified events, and historical reset cadence. Click the area to open the detailed forecast, timeline, and sources.
+
+This is different from the personal quota card: the quota card reflects the signed-in Codex account's own windows, while the Tibo area summarizes public global-reset signals. SILO displays “No schedule” when there is no credible announced window. This is a third-party prediction, not an official OpenAI commitment.
+
+### Conversation, mode, and per-task controls
+
+![SILO conversation and per-task controls](docs/images/silo-task-actions-zoom.png)
+
+| Control | What it does |
+|---|---|
+| **Conversation** | Shows message history and lets you send a follow-up prompt as you would in Codex. |
+| **Files** | Browses text files referenced by the conversation or found in its working directory, with an in-panel preview. |
+| **History** | Shows SILO batches and their status changes. |
+| **Running** | Collects Codex tasks that are currently running or waiting for attention and keeps their state updated. |
+| **Continue** | Continues from the existing conversation context and generates the matching Continue prompt. |
+| **Optimize** | Reviews and improves an existing result and generates the matching Optimize prompt. |
+| **Model / Effort** | Follows the original conversation by default, with optional per-task overrides. |
+| **⚡ Fast** | Requests the Codex Fast service tier for the current send. |
+| **🔥 Burn** | Appends a throughput-oriented parallel-execution strategy. Turning on Burn also enables Fast, without weakening verification or safety boundaries. |
+| **Send / Send now** | Sends the current message or reviewed execution prompt to the original Codex task. |
+| **×** | Closes the detail view and returns to the task list. |
+
 ## What SILO gives you
 
 SILO keeps the high-frequency controls in one workbench: find the right task, decide whether to Continue or Optimize it, review the exact prompt and settings, then launch only after confirmation.
