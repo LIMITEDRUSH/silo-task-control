@@ -6,6 +6,28 @@ SILO is a lightweight Codex control panel for scanning existing tasks across pro
 
 Current release: **v0.6.2** (`0.6.2+codex.20260914`)
 
+![SILO task control overview](docs/images/silo-overview.png)
+
+## What SILO gives you
+
+SILO keeps the high-frequency controls in one workbench: find the right task, decide whether to Continue or Optimize it, review the exact prompt and settings, then launch only after confirmation.
+
+### Scan, understand, and select
+
+The task ledger groups conversations by project and shows live state, mode, model, reasoning effort, and last update together. **Smart select** inspects recent context and recommends a focused batch; **🚀 Launch** applies that recommendation as a reversible preset instead of selecting everything or starting immediately. The header also keeps quota remaining and reset timing visible without taking over the workspace.
+
+### Continue or Optimize in context
+
+![SILO conversation and task controls](docs/images/silo-conversation.png)
+
+Selecting a task opens its conversation in place. You can read the latest user and Codex messages, choose **Continue** or **Optimize**, edit the generated prompt, and override Burn, Fast, model, or reasoning effort before sending. The Files, History, and Running tabs stay attached to the same task, so inspection does not lose your place.
+
+### The same workflow in a compact panel
+
+![SILO compact responsive panel](docs/images/silo-compact.png)
+
+At narrow widths the inventory gives way to a focused task view while search, task filters, mode selection, conversation, and launch controls remain reachable. SILO uses the same responsive panel on Windows and macOS.
+
 ## Install
 
 Add the GitHub repository as a Codex marketplace, then install SILO:
