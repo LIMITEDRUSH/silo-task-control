@@ -1,6 +1,6 @@
 {
   "name": "silo-task-control",
-  "version": "0.6.0+codex.20260914",
+  "version": "0.6.1+codex.20260914",
   "description": "A fast, focused control panel for finding, reviewing, and dispatching Codex tasks.",
   "author": {
     "name": "LIMITEDRUSH"
