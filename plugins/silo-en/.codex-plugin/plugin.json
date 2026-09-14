@@ -1,6 +1,6 @@
 {
   "name": "silo-en",
-  "version": "0.6.1+codex.20260914",
+  "version": "0.6.0+codex.20260914",
   "description": "SILO follows the local Codex language automatically, scans and filters tasks, and batch-continues or optimizes reviewed work.",
   "author": {
     "name": "LIMITEDRUSH"
